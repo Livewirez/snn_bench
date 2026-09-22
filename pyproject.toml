@@ -1,3 +1,6 @@
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -5,18 +8,18 @@ build-backend = "hatchling.build"
 [project]
 name = "snn_bench"
 version = "0.0.1"
-authors = [
-  { name="Stephen Michuki", email="stevemwendest@gmail.com" },
-]
-description = "A Project for independently testable components for data ingestion, ANN training, ANN to SNN conversion, evaluation and results visualization."
 dependencies = [
   "torch",
   "torchsummary",
   "torchmetrics",
   "psutil",
   "pynvml",
-  "spikingjelly"
+  "spikingjelly @ git+https://github.com/fangwei123456/spikingjelly.git",
 ]
+authors = [
+  { name="Stephen Michuki", email="stevemwendest@gmail.com" },
+]
+description = "A Project for independently testable components for data ingestion, ANN training, ANN to SNN conversion, evaluation and results visualization."
 readme = "README.md"
 requires-python = ">=3.8"
 license = "GPL-3.0-only"
