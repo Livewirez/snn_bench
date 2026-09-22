@@ -1,5 +1,5 @@
 """
-snn-bench -- a modular framework for benchmarking accuracy retention and energy
+snn_bench -- a modular framework for benchmarking accuracy retention and energy
 efficiency in ANN-to-SNN conversion.
 
 MSc Data Science dissertation (unit 6G7V0007): "Evaluating Accuracy Retention
@@ -17,7 +17,7 @@ Components (one module each, independently testable):
     plots       -- result visualisation (accuracy-vs-latency, spikes, energy)
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 from typing import Union

@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "snn_bench"
-version = "0.0.1"
+dynamic = ["version"]
 dependencies = [
   "torch",
   "torchsummary",
@@ -27,6 +27,9 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
 ]
+
+[tool.hatch.version]
+path = "src/snn_bench/__init__.py"
 
 [project.urls]
 Homepage = "https://github.com/Livewirez/snn_bench"
