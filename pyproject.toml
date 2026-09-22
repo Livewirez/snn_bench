@@ -14,7 +14,6 @@ dependencies = [
   "torchmetrics",
   "psutil",
   "pynvml",
-  "spikingjelly @ git+https://github.com/fangwei123456/spikingjelly.git",
 ]
 authors = [
   { name="Stephen Michuki", email="stevemwendest@gmail.com" },
