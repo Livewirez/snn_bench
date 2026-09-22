@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "snn_bench"
+version = "0.0.1"
+authors = [
+  { name="Stephen Michuki", email="stevemwendest@gmail.com" },
+]
+description = "A Project for independently testable components for data ingestion, ANN training, ANN to SNN conversion, evaluation and results visualization."
+dependencies = [
+  "torch",
+  "torchsummary",
+  "torchmetrics",
+  "psutil",
+  "pynvml",
+  "spikingjelly @ git+https://github.com/fangwei123456/spikingjelly.git",
+]
+readme = "README.md"
+requires-python = ">=3.8"
+license = "GPL-3.0-only"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/Livewirez/snn_bench"
+Repository = "https://github.com/Livewirez/snn_bench"
+Issues = "https://github.com/Livewirez/snn_bench/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/snn_bench"]
