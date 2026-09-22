@@ -322,7 +322,7 @@ def visualize_predictions_colored(original_image, probabilities, class_names, re
 
 def test_eval(model, index, dataset, config, transforms=None):
     # Load a single image
-    index = 4373  # must be < 5000 if using your split test_dataset
+    # index = 4373  # must be < 5000 if using your split test_dataset
     input, label = dataset[index]
 
     # Keep tensor shape: (1, 28, 28)

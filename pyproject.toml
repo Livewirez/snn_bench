@@ -15,7 +15,7 @@ dependencies = [
   "torchmetrics",
   "psutil",
   "pynvml",
-  "spikingjelly @ git+https://github.com/fangwei123456/spikingjelly.git",
+  "spikingjelly"
 ]
 readme = "README.md"
 requires-python = ">=3.8"
