@@ -26,7 +26,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from typing import Dict, List, Optional, Tuple
-from . import LayerSpec, SYNAPTIC_TYPES, NEURON_TYPES
+from .types import LayerSpec, SYNAPTIC_TYPES, NEURON_TYPES
+
 
 from spikingjelly.activation_based import neuron, functional
 

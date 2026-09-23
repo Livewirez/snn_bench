@@ -5,12 +5,51 @@ import torch.utils.data as data
 import torchvision
 import numpy as np
 from torchsummary import summary # Libraries for previewing neural network architectures
-from spikingjelly.activation_based import neuron, encoding, functional, surrogate
+from spikingjelly.activation_based import neuron, layer, functional, surrogate, encoding
 from spikingjelly import visualizing
 from matplotlib import pyplot as plt
 import time
 
 from snn_bench.config import Config
+
+
+class DirectSNN(nn.Module):
+    """Same topology as the ANN: 2xConv+Pool → FC 512 → FC 256 → FC 10.
+    ReLU replaced by LIF; dropout omitted (or use layer.Dropout)."""
+
+    def __init__(self, num_classes=10, tau=2.0):
+        super().__init__()
+        surr = surrogate.ATan()
+
+        self.features = nn.Sequential(
+            # Block 1  (matches ANN: 32 filters, 3×3, pool/2)
+            layer.Conv2d(1, 32, kernel_size=3, stride=1, padding=1, bias=False),
+            neuron.LIFNode(tau=tau, surrogate_function=surr),
+            layer.MaxPool2d(kernel_size=2),   # 28 → 14
+
+            # Block 2  (matches ANN: 64 filters, 3×3, pool/2)
+            layer.Conv2d(32, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            neuron.LIFNode(tau=tau, surrogate_function=surr),
+            layer.MaxPool2d(kernel_size=2),   # 14 → 7
+        )
+
+        self.classifier = nn.Sequential(
+            layer.Flatten(),
+            # 64 * 7 * 7 = 3136  (for 28×28 input)
+            layer.Linear(64 * 7 * 7, 512, bias=False),
+            neuron.LIFNode(tau=tau, surrogate_function=surr),
+            # optional: layer.Dropout(0.4)
+            layer.Linear(512, 256, bias=False),
+            neuron.LIFNode(tau=tau, surrogate_function=surr),
+            layer.Linear(256, num_classes, bias=False),
+            neuron.LIFNode(tau=tau, surrogate_function=surr),  # output spikes
+        )
+
+    def forward(self, x):
+        # x: [N, 1, 28, 28]  or already spikes from encoder
+        x = self.features(x)
+        x = self.classifier(x)
+        return x
 
 
 # Define network architecture

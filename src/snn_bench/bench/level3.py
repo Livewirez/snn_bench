@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader, random_split
 
 from typing import Dict, List, Optional, Tuple, Union
-from . import LayerSpec, EnergyModel, sram_access_energy, profile_topology, INT32_MODEL, SYNAPTIC_TYPES, NEURON_TYPES,BYTES_PER_WORD
+from . import sram_access_energy, profile_topology
+from .types import LayerSpec, EnergyModel, SYNAPTIC_TYPES, NEURON_TYPES, INT32_MODEL,BYTES_PER_WORD
 
 from spikingjelly.activation_based import neuron, functional
 from ..constants import _NVML, _HAS_NVML, _HAS_PSUTIL
