@@ -30,6 +30,8 @@ __all__ = [
     "train_snn",
     "eval_snn",
     "ANN",
+    "ResNet50Modified",
+    "ResNet18Modified",
     "SNN",
     "CriterionType",
     "OptimizerFactory"
