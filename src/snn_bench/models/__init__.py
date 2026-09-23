@@ -3,13 +3,13 @@ from torch.optim import Optimizer
 
 
 
-from .train_ann import train_ann
-from .eval_ann import eval_ann
-from .snn import SNN, DirectSNN          # example class
-from .train_snn import train_snn
-from .eval_snn import eval_snn
-from .ann import ANN, ResNet50Modified, ResNet18Modified          # example class
-from .types import  CriterionType, OptimizerFactory
+from . import train_ann
+from . import eval_ann
+from . import snn        # example class
+from . import train_snn
+from . import eval_snn
+from . import ann          # example class
+from . import types
 
 
 __all__ = [
@@ -17,11 +17,7 @@ __all__ = [
     "eval_ann",
     "train_snn",
     "eval_snn",
-    "ANN",
-    "ResNet50Modified",
-    "ResNet18Modified",
-    "SNN",
-    "DirectSNN",
-    "CriterionType",
-    "OptimizerFactory"
+    "ann",
+    "snn",
+    "types",
 ]
