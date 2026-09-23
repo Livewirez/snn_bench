@@ -17,7 +17,7 @@ Components (one module each, independently testable):
     plots       -- result visualisation (accuracy-vs-latency, spikes, energy)
 """
 
-__version__ = "0.1.5"
+__version__ = "0.1.51"
 
 
 from typing import Union
@@ -32,8 +32,10 @@ from . import data, benchmark, config, constants  # always importable (pure torc
 try:
     from . import models, conversion_mod, conversion, evaluate, train    # noqa: F401
     _SPIKINGJELLY = True
-except Exception:  # pragma: no cover - depends on optional dependency
+except Exception as err:  # pragma: no cover - depends on optional dependency
+    print(f"Unexpected {err=}, {type(err)=}")
     _SPIKINGJELLY = False
+    raise
 
 __all__ = [
     "data", "benchmark", "config", "constants", "models",
