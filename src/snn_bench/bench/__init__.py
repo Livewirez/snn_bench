@@ -18,13 +18,13 @@ from spikingjelly.activation_based import neuron, functional
 
 from ..constants import _NVML, _HAS_NVML, _HAS_PSUTIL
 
-from level1 import (
+from .level1 import (
     count_activity,
     validate_activity,
     level1_summary
 )
 
-from level2 import (
+from .level2 import (
     snn_layer_counts,
     _dense_counts,
     ann_layer_counts,
@@ -34,7 +34,7 @@ from level2 import (
     ann_baseline
 )
 
-from level3 import (
+from .level3 import (
     _PowerSampler,
     _energy_J,
     measure_idle_power,
@@ -42,7 +42,7 @@ from level3 import (
 )
 
 
-from accuracy_retention import (
+from .accuracy_retention import (
     Source,
     
     _label,
