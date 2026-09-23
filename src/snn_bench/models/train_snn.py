@@ -25,7 +25,6 @@ from . import CriterionProtocol, OptimizerFactory
 Encoder = Union[
     spikingjelly.activation_based.encoding.StatelessEncoder,
     spikingjelly.activation_based.encoding.StatefulEncoder,
-    
 ]
 
 class TrainOptions:
@@ -52,7 +51,7 @@ class TrainOptions:
                 lr=0.001,
                 weight_decay=0.0,
             ),
-            encoder=lambda params: encoding.PoissonEncoder()
+            encoder=encoding.PoissonEncoder()
         )
     
 # # Set neural network hyperparameters
@@ -88,7 +87,7 @@ def start_training_snn_loop(model: nn.Module, train_dataloader: DataLoader, test
         else torch.optim.AdamW(model.parameters(), lr=0.001, weight_decay=0.0)
     )
     
-    encoder = loss_fn = (
+    encoder = (
         options.encoder if options.encoder is not None
         else encoding.PoissonEncoder()
     )
