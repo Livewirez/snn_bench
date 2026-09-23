@@ -18,37 +18,7 @@ from spikingjelly.activation_based import neuron, functional
 
 from ..constants import _NVML, _HAS_NVML, _HAS_PSUTIL
 
-__all__ = [
-    
-    "accuracy_vs_T",
-    "run_benchmark",
-    "plot_all",
-    
-    "count_activity",
-    "validate_activity",
-    "level1_summary",
-    
-    "snn_layer_counts",
-    "_dense_counts",
-    "ann_layer_counts",
-    "layer_memory_kB",
-    "counts_to_energy",
-    "analytical_energy",
-    "ann_baseline",
-    
-    "_PowerSampler",
-    "_energy_J",
-    "measure_idle_power",
-    "measure_empirical",
-    
-    "Source",
-    "_label",
-    "accuracy_retention",
-    "best_retention",
-    "plot_accuracy_retention",
-    "plot_retention_vs_energy"
-]
- 
+
 
 from .types import (
     LayerSpec, EnergyModel, SYNAPTIC_TYPES, NEURON_TYPES,
@@ -430,3 +400,35 @@ from .accuracy_retention import (
     plot_accuracy_retention,
     plot_retention_vs_energy
 )
+
+__all__ = [
+    
+    "accuracy_vs_T",
+    "run_benchmark",
+    "plot_all",
+    
+    "count_activity",
+    "validate_activity",
+    "level1_summary",
+    
+    "snn_layer_counts",
+    "_dense_counts",
+    "ann_layer_counts",
+    "layer_memory_kB",
+    "counts_to_energy",
+    "analytical_energy",
+    "ann_baseline",
+    
+    "_PowerSampler",
+    "_energy_J",
+    "measure_idle_power",
+    "measure_empirical",
+    
+    "Source",
+    "_label",
+    "accuracy_retention",
+    "best_retention",
+    "plot_accuracy_retention",
+    "plot_retention_vs_energy"
+]
+ 

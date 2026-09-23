@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from typing import Sequence, Mapping, Any
 
 from ..config import Config
-from . import CriterionProtocol, OptimizerFactory
+from .types import CriterionProtocol, OptimizerFactory
 
 
 Encoder = Union[

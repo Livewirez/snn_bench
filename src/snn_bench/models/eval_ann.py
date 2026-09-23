@@ -17,7 +17,7 @@ from torchmetrics import MeanMetric, Accuracy
 from torchmetrics import ConfusionMatrix, Accuracy, Precision, Recall, F1Score
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
 
-from snn_bench.config import EvaluationResult, Config
+from .config import EvaluationResult, Config
 
 
 @torch.no_grad()

@@ -1,5 +1,5 @@
-from .recipes import recipes
-from .eval_conv_snn import eval_conv_snn
+from . import recipes
+from . import eval_conv_snn
 
 __all__ = [
     "recipes",

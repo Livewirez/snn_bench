@@ -1,27 +1,15 @@
-from typing import Callable, Optional, Union, Iterable, Tuple, Dict, Protocol, runtime_checkable
 import torch
 from torch.optim import Optimizer
 
+
+
 from .train_ann import train_ann
 from .eval_ann import eval_ann
-from .snn import SNN          # example class
+from .snn import SNN, DirectSNN          # example class
 from .train_snn import train_snn
 from .eval_snn import eval_snn
-from .ann import ANN          # example class
-
-@runtime_checkable
-class CriterionProtocol(Protocol):
-    # The "/" makes the parameters positional-only. Without it, mypy/pyright
-    # require implementations to use the exact names `pred` and `target`,
-    def __call__(self, pred: torch.Tensor, target: torch.Tensor, /) -> torch.Tensor: ...
-
-
-CriterionType = CriterionProtocol
-
-OptimizerFactory = Callable[
-    [Iterable[torch.nn.Parameter]],
-    Optimizer
-]
+from .ann import ANN, ResNet50Modified, ResNet18Modified          # example class
+from .types import  CriterionType, OptimizerFactory
 
 
 __all__ = [
@@ -33,7 +21,7 @@ __all__ = [
     "ResNet50Modified",
     "ResNet18Modified",
     "SNN",
+    "DirectSNN",
     "CriterionType",
     "OptimizerFactory"
 ]
-

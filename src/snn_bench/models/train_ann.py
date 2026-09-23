@@ -30,11 +30,11 @@ from pathlib import Path
 from tqdm import tqdm
 
 
-from snn_bench.config import Config
+from ..config import Config
 
-from . import CriterionType, CriterionProtocol
+from .types import CriterionType, CriterionProtocol
 
-from snn_bench.models.eval_ann import (
+from .eval_ann import (
     plot_model_curves,
     evaluate_model,
     show_model_results,
