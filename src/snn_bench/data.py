@@ -21,7 +21,7 @@ from .config import BATCH_SIZE
 
 DATASETS = {
     "mnist":        (torchvision.datasets.MNIST, 1, 28, 10),
-    "fashionmnist": (torchvision.datasets.FahionMNIST, 1, 28, 10),
+    "fashionmnist": (torchvision.datasets.FashionMNIST, 1, 28, 10),
     "kmnist":       (torchvision.datasets.KMNIST, 1, 28, 10),
     "cifar10":      (torchvision.datasets.CIFAR10, 3, 32, 10), # Needs a 3-ch Model
 }
