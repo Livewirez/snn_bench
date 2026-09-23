@@ -3,6 +3,8 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
+
+import spikingjelly
 from spikingjelly.activation_based import functional
 from spikingjelly.activation_based import neuron, encoding, functional, surrogate
 from spikingjelly import visualizing

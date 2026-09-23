@@ -13,7 +13,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader, random_split
- 
+
+import spikingjelly 
 from spikingjelly.activation_based import neuron, functional
 
 from ..constants import _NVML, _HAS_NVML, _HAS_PSUTIL
