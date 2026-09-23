@@ -10,7 +10,7 @@ from spikingjelly import visualizing
 from matplotlib import pyplot as plt
 import time
 
-from .config import Config
+from ..config import Config
 
 
 class DirectSNN(nn.Module):
