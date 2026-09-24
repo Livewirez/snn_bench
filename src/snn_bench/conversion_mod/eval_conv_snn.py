@@ -14,15 +14,16 @@ import timm
 import torchvision
 import torchvision.transforms as transforms
 from torchvision.datasets import  ImageFolder
+from torchvision.transforms import v2
 
 import math
 from dataclasses import dataclass, field
-from typing import Sequence, Mapping, Any
+from typing import Sequence, Mapping, Any, Tuple, Optional, Callable
 
 Device = Union[torch.device, str]
 
 
-def try_visualize_converted(model: nn.Module, dataset: Dataset, T: int, index: int, device: Device = 'cuda'):
+def try_visualize_converted(model: nn.Module, dataset: Dataset, T: int, index: int, device: Device = 'cuda', test_transforms: Optional[Sequence[Callable]] = None, figsize: Tuple[int, int] = (12, 8)):
     """
        Visualize Spikes of Converted SNN 
        
@@ -71,7 +72,12 @@ def try_visualize_converted(model: nn.Module, dataset: Dataset, T: int, index: i
     # Load one sample
     img, label = dataset[index]
     print(f"Original label: {label}")
-    plt.imshow(torchvision.transforms.ToPILImage()(img), cmap='gray')
+    transforms = (
+        test_transforms
+        if test_transforms is not None
+        else v2.Compose([torchvision.transforms.ToPILImage()])
+    )
+    plt.imshow(transforms(img), cmap='gray')
     plt.title(f"Label: {label}")
     plt.axis('off')
     plt.show()
@@ -87,12 +93,11 @@ def try_visualize_converted(model: nn.Module, dataset: Dataset, T: int, index: i
 
         # Concatenate recorded sequences
         if len(output_neuron.v_seq) == 0:
-            raise RuntimeError("Hook collected no data – check that the correct neuron was selected")
+            raise RuntimeError("Hook collected no data - check that the correct neuron was selected")
         v_t_array = torch.cat(output_neuron.v_seq).cpu().numpy().squeeze()  # [T, 10]
         s_t_array = torch.cat(output_neuron.s_seq).cpu().numpy().squeeze()  # [T, 10]
 
         # Visualise
-        figsize = (12, 8)
         dpi = 100
         visualizing.plot_2d_heatmap(
             array=v_t_array,

@@ -13,7 +13,7 @@ from torchvision.transforms import v2
 
 import math
 from dataclasses import dataclass, field
-from typing import Sequence, Mapping, Any, Optional, Callable
+from typing import Sequence, Mapping, Any, Optional, Callable, Tuple
 
 from .types import SNNModule, SpikingJellyEncoder
 from ..config import Config
@@ -32,7 +32,8 @@ class Curve:
 
 def plot_snn_module_spikes(
     snn: SNNModule, test_dataset: Dataset, encoder: SpikingJellyEncoder, 
-    config: Config, index: int, T: int = 20, test_transforms: Optional[Sequence[Callable]] = None
+    config: Config, index: int, T: int = 20, test_transforms: Optional[Sequence[Callable]] = None,
+    figsize: Tuple[int, int] = (12, 8)
 ):
     #For a more intuitive understanding, we can select a single image for prediction; by changing the index, we can choose different input images.
 
@@ -101,7 +102,6 @@ def plot_snn_module_spikes(
         s_t_array = output_layer.s_seq.cpu().numpy().squeeze()  # s_t_array[i][j] represents the spike fired by neuron i at time j, which is either 0 or 1
 
         # Heatmap of membrane potentials and spike output results
-        figsize = (12, 8)
         dpi = 100
         visualizing.plot_2d_heatmap(array=v_t_array, title='membrane potentials', xlabel='simulating step',
                                     ylabel='neuron index', int_x_ticks=True, x_max=T, figsize=figsize, dpi=dpi)
