@@ -273,6 +273,9 @@ def run_benchmark(
             "E_snn_ops": snn_e["E_ops"], "E_snn_addr": snn_e["E_addr"],
             "E_ann": ann_e["E_total"],
             "E_ratio_ann_over_snn": snn_e["ratio_ann_over_snn"],
+            
+            # "E_proxy": simple_proxy_energy(l1["total_spikes_per_sample"],snn_e["acc"] + snn_e["mac"]),
+            # "proxy_underestimate": snn_e["E_total"] / simple_proxy_energy(l1["total_spikes_per_sample"], snn_e["acc"] + snn_e["mac"]),
         }
         if run_level3:
             row.update({k: v for k, v in measure_empirical(
@@ -287,11 +290,18 @@ def run_benchmark(
             print(f"  E_ann / E_snn     : {row['E_ratio_ann_over_snn']:.3f}x")
  
     df = pd.DataFrame(rows)
- 
+        
     if measure_accuracy:
-        acc = accuracy_vs_T(snn, loader, list(Ts), device,
-                            spiking=True, max_batches=acc_max_batches)
+        acc = accuracy_vs_T(snn, loader, list(Ts), device, spiking=True, max_batches=acc_max_batches)
         df = df.merge(acc[["T", "accuracy"]], on="T", how="left")
+
+        # Eq. 5: Accuracy / Energy (Sales2025)
+        n_classes = base_specs[-1].n_out_positions
+        chance = 1.0 / n_classes
+
+        df["acc_per_joule_raw"] = df["accuracy"] / df["E_snn"]
+        df["acc_per_joule"] = ((df["accuracy"] - chance).clip(lower=0) / df["E_snn"])
+        df.loc[df["accuracy"] < 0.5, "acc_per_joule"] = np.nan
  
     return df, frames
  
@@ -365,7 +375,15 @@ def plot_all(df: pd.DataFrame, prefix: str = ""):
         ax.set_title(f"{prefix}Measured latency"); _x(ax)
         fig.tight_layout(); plt.show()
         
-        
+    if "acc_per_joule" in df.columns and df["acc_per_joule"].notna().any():
+        fig, ax = plt.subplots(figsize=(7.5, 4.5))
+        ax.plot(Ts, df["acc_per_joule"], "o-", color="C6", lw=2, ms=7, label="floored (accuracy above chance)")
+        ax.plot(Ts, df["acc_per_joule_raw"], "s--", color="C7", lw=1.5,alpha=0.6, label="raw Acc / E")
+        ax.set_yscale("log"); ax.set_xlabel("Timesteps (T)")
+        ax.set_ylabel("Accuracy per joule")
+        ax.set_title(f"{prefix}Eq. 5 efficiency (raw form peaks where the network fails)[Sales2025]")
+        ax.legend(fontsize=8); _x(ax)
+        fig.tight_layout(); plt.show()    
         
 
 from .level1 import (
@@ -381,7 +399,8 @@ from .level2 import (
     layer_memory_kB,
     counts_to_energy,
     analytical_energy,
-    ann_baseline
+    ann_baseline,
+    simple_proxy_energy
 )
 
 from .level3 import (

@@ -8,6 +8,8 @@ from .conversion_mod import eval_conv_snn
 
 from .config import Config
 
+from typing import Union
+
 class Converter:
     """
     === ann2snn ===
@@ -23,7 +25,8 @@ class Converter:
     ['__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', '_download_without_resume', '_validate_download_response', 'download_url', 'logger', 'os', 're', 'requests', 'time', 'tqdm']
 
     """
-    def handle_rate_coded(model: nn.Module, train_dataset: Dataset, config: Config, mode: str ="max") -> nn.Module:
+    # RateCodingRecipe or LocalThresholdBalancingRecipe for ReLU CNNs; use FXConverter and a calibration dataloader.
+    def handle_rate_coded(model: nn.Module, train_dataset: Dataset, config: Config, mode: Union[str, float] ="max") -> nn.Module:
         calibration_data_loader = torch.utils.data.DataLoader(
             dataset=train_dataset, batch_size=config.batch_size, shuffle=False, drop_last=False
         )
@@ -35,6 +38,19 @@ class Converter:
         converted_snn = ann2snn.FXConverter(recipe).convert(model)
         
         return converted_snn
+    
+    def handle_rate_coded_threshold_balanced(model: nn.Module, train_dataset: Dataset, config: Config) -> nn.Module:
+        calibration_data_loader = torch.utils.data.DataLoader(
+            dataset=train_dataset, batch_size=config.batch_size, shuffle=False, drop_last=False
+        )
+        
+        recipe = ann2snn.LocalThresholdBalancingRecipe(
+            dataloader=calibration_data_loader,
+        )
+        converted_snn = ann2snn.FXConverter(recipe).convert(model)
+        
+        return converted_snn
+   
 
 __all__ = [
     "recipes",

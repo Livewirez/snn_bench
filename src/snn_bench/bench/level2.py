@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 from typing import Dict, List, Optional, Tuple, Union
 from . import sram_access_energy, profile_topology
-from .types import LayerSpec, EnergyModel, SYNAPTIC_TYPES, NEURON_TYPES, INT32_MODEL,BYTES_PER_WORD
+from .types import LayerSpec, EnergyModel, SYNAPTIC_TYPES, NEURON_TYPES, INT32_MODEL,BYTES_PER_WORD, E_ADD_FP32
 
 from spikingjelly.activation_based import neuron, functional
 
@@ -100,10 +100,21 @@ def counts_to_energy(counts: Dict[str, float], mem_kB: float, em: EnergyModel) -
     E_mem = (counts["rd"] + counts["wr"]) * e_access
     E_ops = counts["mac"] * em.e_mac + counts["acc"] * em.e_acc
     E_addr = counts["mac_addr"] * em.e_mac + counts["acc_addr"] * em.e_acc
-    return {"E_mem": E_mem, "E_ops": E_ops, "E_addr": E_addr,
-            "E_total": E_mem + E_ops + E_addr,
-            "mem_kB": mem_kB, "e_access_J": e_access, **counts}
- 
+    return {
+        "E_mem": E_mem, "E_ops": E_ops, "E_addr": E_addr,
+        "E_total": E_mem + E_ops + E_addr,
+        "mem_kB": mem_kB, "e_access_J": e_access, **counts
+    }
+
+def simple_proxy_energy(total_spikes: float, total_ops: float, e_spike: float = 0.0, e_synapse: float = E_ADD_FP32) -> float:
+    """
+    Eq. 4:  E_total = E_spike * S + E_synapse * C
+
+    The two-term proxy common in SNN literature. Assumes a constant cost per
+    operation, ignoring that SRAM access energy scales with memory size.
+    Reported alongside the Lemaire model to quantify that simplification.
+    """
+    return e_spike * total_spikes + e_synapse * total_ops
  
 def analytical_energy(specs: List[LayerSpec], T: int, em: EnergyModel = INT32_MODEL, fc_acc_literal: bool = False):
     rows = []

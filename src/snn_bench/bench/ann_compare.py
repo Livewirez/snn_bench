@@ -87,6 +87,7 @@ def profile_ann(
         "E_mem": totals["E_mem"],
         "E_ops": totals["E_ops"],
         "E_addr": totals["E_addr"],
+        "acc_per_joule": accuracy / totals["E_total"],
         "mac": totals["mac"],
         "mem_ops": totals["rd"] + totals["wr"],
         "time_per_sample_ms": emp["time_per_sample_ms"] if emp else np.nan,
