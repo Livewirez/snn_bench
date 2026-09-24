@@ -99,3 +99,20 @@ def get_loaders(
 
     meta = DatasetMeta(name=name, num_classes=n_cls, in_channels=in_ch, img_size=img_size)
     return train_loader, val_loader, test_loader, meta
+
+def get_custom_image_loaders(
+    train_data_dir: str, val_data_dir: str, test_data_dir: str, train_transform=None, eval_transform=None,
+    name: str = 'Default', img_size: int = 28, in_ch: int = 1, batch_size: int = 64, num_workers: int = 2
+):
+    train_dataset = ImageDataset(train_data_dir, transform=train_transform)
+    val_dataset   = ImageDataset(val_data_dir,   transform=eval_transform)
+    test_dataset  = ImageDataset(test_data_dir,  transform=eval_transform)
+    
+    common = dict(batch_size=batch_size, num_workers=num_workers, pin_memory=True)
+
+    train_loader = DataLoader(train_dataset, shuffle=True,  **common)
+    val_loader   = DataLoader(val_dataset,   shuffle=False, **common)
+    test_loader  = DataLoader(test_dataset,  shuffle=False, **common)
+    
+    meta = DatasetMeta(name=name, num_classes=train_dataset.num_classes, in_channels=in_ch, img_size=img_size)
+    return train_loader, val_loader, test_loader, meta

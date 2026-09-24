@@ -28,7 +28,7 @@ class Config:
     class_names: List[str]
     checkpoint_dir: str
     batch_size: int = BATCH_SIZE
-    device: torch.device = DEVICE
+    device: Union[torch.device, str] = DEVICE
     early_stop_counter: int  = 0
     early_stop_patience: int  = 5
     freeze_epoch_limit: int  = 5
