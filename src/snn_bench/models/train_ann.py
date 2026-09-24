@@ -30,7 +30,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 
-from ..config import Config
+from ..config import Config, EvaluationResult
 
 from .types import CriterionType, CriterionProtocol
 
@@ -70,6 +70,9 @@ class TrainOptions:
                 weight_decay=1e-4,
             ),
         )
+
+DEFAULT_OPTIONS = TrainOptions.get_default()
+
 
 
 def get_backbone(model: nn.Module):
@@ -264,7 +267,11 @@ def train_model(model: nn.Module, train_loader: DataLoader, val_loader: DataLoad
     return history
 
 
-def start_training_ann_loops(models: Dict[str, Tuple[nn.Module, bool]], tr_loader: DataLoader, v_loader: DataLoader, te_loader: DataLoader, config: Config):
+def start_training_ann_loops(
+    models: Dict[str, Tuple[nn.Module, bool]], 
+    tr_loader: DataLoader, v_loader: DataLoader, te_loader: DataLoader, 
+    config: Config, options: TrainOptions = DEFAULT_OPTIONS
+) -> Tuple[pd.DataFrame, Dict[str, EvaluationResult], Dict[str, EvaluationResult]]:
     results = {}  # collect evaluation result for comparisons
     history_results = pd.DataFrame() # for full results from model loop
     evaluation_results = {}
@@ -277,7 +284,7 @@ def start_training_ann_loops(models: Dict[str, Tuple[nn.Module, bool]], tr_loade
         print(f"{'='*60}")
 
         statistics = train_model(
-            model, tr_loader, v_loader,
+            model, tr_loader, v_loader, config, options,
             num_epochs=config.max_epoch_limit, model_name=model_name, use_two_phase=use_two_phase
         )
 
@@ -298,7 +305,10 @@ def start_training_ann_loops(models: Dict[str, Tuple[nn.Module, bool]], tr_loade
     return history_results, evaluation_results, results
 
 
-def start_training_ann_loop(model: nn.Module, tr_loader: DataLoader, v_loader: DataLoader, te_loader: DataLoader, config: Config, use_two_phase: bool = False):
+def start_training_ann_loop(
+    model: nn.Module, tr_loader: DataLoader, v_loader: DataLoader, te_loader: DataLoader, 
+    config: Config, options: TrainOptions = DEFAULT_OPTIONS, use_two_phase: bool = False
+) -> Tuple[pd.DataFrame, Dict[str, EvaluationResult], Dict[str, EvaluationResult]]:
     results = {}  # collect evaluation result for comparisons
     history_results = pd.DataFrame() # for full results from model loop
     evaluation_results = {}
@@ -312,7 +322,7 @@ def start_training_ann_loop(model: nn.Module, tr_loader: DataLoader, v_loader: D
     print(f"{'='*60}")
 
     statistics = train_model(
-        model, tr_loader, v_loader,
+        model, tr_loader, v_loader, config, options,
         num_epochs=config.max_epoch_limit, model_name=model_name, use_two_phase=use_two_phase
     )
 
