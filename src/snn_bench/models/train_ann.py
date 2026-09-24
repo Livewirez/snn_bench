@@ -121,8 +121,11 @@ def validate_one_epoch(model: nn.Module, dataloader: DataLoader, config: Config,
 
 
 
-def train_model(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
-                config: Config, options: TrainOptions, num_epochs: int = 30, model_name: str = "Default", use_two_phase: bool =True) -> pd.DataFrame:
+def train_model(
+    model: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
+    config: Config, options: TrainOptions = DEFAULT_OPTIONS, num_epochs: int = 30, 
+    model_name: str = "Default", use_two_phase: bool =True
+) -> pd.DataFrame:
     """
     Two-phase fine-tuning strategy:
       Phase 1 (epochs 1-5):  Freeze base_model -> train classifier head only at learning_rate(lr=1e-3).
@@ -220,13 +223,13 @@ def train_model(model: nn.Module, train_loader: DataLoader, val_loader: DataLoad
     for epoch in range(FREEZE_EPOCH_LIMIT if use_two_phase and backbone else 0, num_epochs):
         # Train one epoch
         train_loss, train_acc = train_one_epoch(
-            model, train_loader, optimizer, criterion,
+            model, train_loader, config, optimizer, criterion,
             epoch,
             num_epochs
         )
         # Validate one epoch
         val_loss, val_acc = validate_one_epoch(
-            model, val_loader, optimizer, criterion,
+            model, val_loader, config, optimizer, criterion,
             epoch,
             num_epochs
         )
