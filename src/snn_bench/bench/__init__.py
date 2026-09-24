@@ -402,6 +402,25 @@ from .accuracy_retention import (
     plot_retention_vs_energy
 )
 
+from .ann_compare import (
+    profile_ann,
+    plot_ann,
+    plot_comparison,
+    comparison_table,
+    crossing_points
+)
+
+
+from .totals_report import (
+    build_totals,
+    totals_at,
+    plot_totals,
+    plot_memory_accesses,
+    memory_summary
+)
+
+
+
 __all__ = [
     
     "accuracy_vs_T",
@@ -430,6 +449,18 @@ __all__ = [
     "accuracy_retention",
     "best_retention",
     "plot_accuracy_retention",
-    "plot_retention_vs_energy"
+    "plot_retention_vs_energy",
+    
+    "profile_ann",
+    "plot_ann",
+    "plot_comparison",
+    "comparison_table",
+    "crossing_points"
+    
+    "build_totals",
+    "totals_at",
+    "plot_totals",
+    "plot_memory_accesses",
+    "memory_summary"
 ]
  

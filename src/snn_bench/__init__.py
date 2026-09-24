@@ -17,7 +17,7 @@ Components (one module each, independently testable):
     plots       -- result visualisation (accuracy-vs-latency, spikes, energy)
 """
 
-__version__ = "0.1.63"
+__version__ = "0.1.64"
 
 
 from typing import Union

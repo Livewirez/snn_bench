@@ -11,9 +11,9 @@ from matplotlib import pyplot as plt
 import time
 
 from ..config import Config
+from .types import SNNModule
 
-
-class DirectSNN(nn.Module):
+class DirectSNN(SNNModule):
     """Same topology as the ANN: 2xConv+Pool → FC 512 → FC 256 → FC 10.
     ReLU replaced by LIF; dropout omitted (or use layer.Dropout)."""
 
@@ -50,6 +50,9 @@ class DirectSNN(nn.Module):
         x = self.features(x)
         x = self.classifier(x)
         return x
+    
+    def get_output_layer(self) -> neuron.BaseNode:
+        return self.classifier[6]
 
 
 # Define network architecture
@@ -67,6 +70,8 @@ class SNN(nn.Module):
         # x = F.softmax(x, dim=0) #softmax activation layer is used for multivariate classification
         return x
 
+    def get_output_layer(self) -> neuron.BaseNode:
+        return self.lif_layer_1
 
 
 

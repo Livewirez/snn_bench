@@ -17,6 +17,8 @@ from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import v2
 
+from typing import Callable, Optional, Sequence
+
 from .config import BATCH_SIZE
 
 DATASETS = {
@@ -67,7 +69,9 @@ class DatasetMeta:
  
 def get_loaders(
     name: str = "mnist", root: str = "./dataset", batch_size: int = BATCH_SIZE,
-    val_fraction: float = 0.5, seed: int = 42, num_workers: int = 2
+    val_fraction: float = 0.5, seed: int = 42, num_workers: int = 2,
+    train_transforms: Optional[Sequence[Callable]] = None, 
+    test_transforms: Optional[Sequence[Callable]] = None
 ):
     """
     Return :(train_loader, val_loader, test_loader, meta).
@@ -81,9 +85,15 @@ def get_loaders(
         raise ValueError(f"Unknown dataset {name!r}. Available: {list(DATASETS)}")
     cls, in_ch, img_size, n_cls = DATASETS[name]
 
-    tf = v2.Compose([v2.ToTensor()])  # pixels in [0, 1]
-    train_set = cls(root=root, train=True,  download=True, transform=tf)
-    test_full = cls(root=root, train=False, download=True, transform=tf)
+    # tf = v2.Compose([v2.ToTensor()])  # pixels in [0, 1]
+    # to_tensor = [v2.Compose([v2.ToTensor()])]  # pixels in [0, 1]
+    to_tensor = [v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]  # pixels in [0, 1]
+
+    train_tf = v2.Compose([*(train_transforms or []), *to_tensor])  # user transforms first, conversion last
+    eval_tf  = v2.Compose([*(test_transforms or []), *to_tensor])  # no augmentation
+    
+    train_set = cls(root=root, train=True,  download=True, transform=train_tf)
+    test_full = cls(root=root, train=False, download=True, transform=eval_tf)
 
     val_size = int(len(test_full) * val_fraction)
     test_size = len(test_full) - val_size

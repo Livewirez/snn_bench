@@ -2,17 +2,21 @@ from __future__ import annotations
 
 import torch
 import torch.nn as nn
+import torchvision
 from torch.utils.data import Dataset, DataLoader
 from spikingjelly.activation_based import functional
 from spikingjelly.activation_based import neuron, encoding, functional, surrogate
 from spikingjelly import visualizing
 from matplotlib import pyplot as plt
 import numpy as np
-
+from torchvision.transforms import v2
 
 import math
 from dataclasses import dataclass, field
-from typing import Sequence, Mapping, Any
+from typing import Sequence, Mapping, Any, Optional, Callable
+
+from .types import SNNModule, SpikingJellyEncoder
+from ..config import Config
 
 @dataclass
 class Curve:
@@ -23,7 +27,90 @@ class Curve:
     color: str | None = None
     ls: str = "-"
 
-  # then: ax.plot(T, c.y, marker=c.marker, ms=c.ms, label=c.label, color=c.color, ls=c.ls)
+
+
+
+def plot_snn_module_spikes(
+    snn: SNNModule, test_dataset: Dataset, encoder: SpikingJellyEncoder, 
+    config: Config, index: int, T: int = 20, test_transforms: Optional[Sequence[Callable]] = None
+):
+    #For a more intuitive understanding, we can select a single image for prediction; by changing the index, we can choose different input images.
+
+    # Obtaining the membrane potential of the output layer neurons at this point is somewhat challenging and requires the use of the “hook” feature.
+
+    # Retrieve a single image for prediction
+
+    # Load the raw data
+    # Load a single image from the test set
+    # Save the data for plotting
+    snn.eval()
+    functional.reset_net(snn)
+    # Register a hook
+    output_layer = snn.get_output_layer() # Output layer
+    output_layer.v_seq = []
+    output_layer.s_seq = []
+    def save_hook(m, x, y):
+        m.v_seq.append(m.v.unsqueeze(0))
+        m.s_seq.append(y.unsqueeze(0))
+
+    hook = output_layer.register_forward_hook(save_hook)
+
+    # Load a single image from the test set
+    input, label = test_dataset[index]
+    
+    transforms = (
+        test_transforms
+        if test_transforms is not None
+        else v2.Compose([torchvision.transforms.ToPILImage()])
+    )
+
+    #input = torchvision.transforms.ToPILImage()(input)
+    input = transforms(input)
+    plt.imshow(input)
+    print('Original image')
+    print(f"label: {label}")
+    plt.show()
+    
+    T = 20
+    # Start making predictions with the neural network
+    snn.eval()
+
+    with torch.no_grad():
+        img, label = test_dataset[index]
+        
+        try:
+            img = img.to(config.device)
+            out_fr = 0.
+            for t in range(T):
+                encoded_img = encoder(img)
+                out_fr += snn(encoded_img)
+            out_spikes_counter_frequency = (out_fr / T).cpu().numpy()
+            
+        except Exception as err:
+            print(f"Unexpected {err=}, {type(err)=}")
+            img = img.unsqueeze(0).to(config.device)
+            out_fr = 0.
+            for t in range(T):
+                encoded_img = encoder(img)
+                out_fr += snn(encoded_img)
+            out_spikes_counter_frequency = (out_fr / T).cpu().numpy()
+
+        output_layer.v_seq = torch.cat(output_layer.v_seq)
+        output_layer.s_seq = torch.cat(output_layer.s_seq)
+        v_t_array = output_layer.v_seq.cpu().numpy().squeeze()  # v_t_array[i][j] represents the voltage value of neuron i at time j
+        s_t_array = output_layer.s_seq.cpu().numpy().squeeze()  # s_t_array[i][j] represents the spike fired by neuron i at time j, which is either 0 or 1
+
+        # Heatmap of membrane potentials and spike output results
+        figsize = (12, 8)
+        dpi = 100
+        visualizing.plot_2d_heatmap(array=v_t_array, title='membrane potentials', xlabel='simulating step',
+                                    ylabel='neuron index', int_x_ticks=True, x_max=T, figsize=figsize, dpi=dpi)
+        visualizing.plot_1d_spikes(spikes=s_t_array, title='membrane sotentials', xlabel='simulating step',
+                                ylabel='neuron index', figsize=figsize, dpi=dpi)
+
+        plt.show()
+
+    hook.remove()
 
 @torch.no_grad()
 def accuracy_vs_T(snn: nn.Module, loader: DataLoader, T_max: int, device: torch.device):

@@ -21,16 +21,11 @@ from dataclasses import dataclass, field
 from typing import Sequence, Mapping, Any
 
 from ..config import Config
-from .types import CriterionProtocol, OptimizerFactory
+from .types import CriterionProtocol, OptimizerFactory, SpikingJellyEncoder
 
-
-Encoder = Union[
-    spikingjelly.activation_based.encoding.StatelessEncoder,
-    spikingjelly.activation_based.encoding.StatefulEncoder,
-]
 
 class TrainOptions:
-    def __init__(self, criterion: Optional[CriterionProtocol] = None, optimizer: Optional[OptimizerFactory] = None, encoder: Optional[Encoder] = None, max_epoch: int = 30):
+    def __init__(self, criterion: Optional[CriterionProtocol] = None, optimizer: Optional[OptimizerFactory] = None, encoder: Optional[SpikingJellyEncoder] = None, max_epoch: int = 30):
         self.criterion = criterion
         self.optimizer = optimizer
         self.encoder = encoder

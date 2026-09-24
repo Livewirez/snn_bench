@@ -1,8 +1,32 @@
 from typing import Callable, Optional, Union, Iterable, Tuple, Dict, Protocol, runtime_checkable
 
 import torch
+import torch.nn as nn
 from torch.optim import Optimizer
+import spikingjelly
+from spikingjelly.activation_based import neuron, layer, functional, surrogate, encoding
 
+
+from abc import ABC, abstractmethod
+
+
+SpikingJellyEncoder = Union[
+    spikingjelly.activation_based.encoding.StatelessEncoder,
+    spikingjelly.activation_based.encoding.StatefulEncoder,
+]
+
+
+class SNNModule(ABC, nn.Module):
+    def reset_state(self):
+        functional.reset_net(self)      # resets all neurons inside the model
+
+    @abstractmethod
+    def forward(self, x: torch.Tensor, /) -> torch.Tensor:
+        """Return logits (e.g. firing rate averaged over T)."""
+        ...
+    
+    @abstractmethod
+    def get_output_layer(self) -> neuron.BaseNode: ...
 
 @runtime_checkable
 class CriterionProtocol(Protocol):
@@ -22,4 +46,6 @@ __all__ = [
     "CriterionProtocol",
     "CriterionType",
     "OptimizerFactory",
+    "SpikingJellyEncoder",
+    "SNNModule"
 ]

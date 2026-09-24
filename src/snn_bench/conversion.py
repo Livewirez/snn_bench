@@ -6,15 +6,7 @@ import spikingjelly.activation_based.ann2snn as ann2snn
 from .conversion_mod import recipes
 from .conversion_mod import eval_conv_snn
 
-__all__ = [
-    "recipes",
-    "eval_conv_snn",
-]
-
 from .config import Config
-
-
-
 
 class Converter:
     """
@@ -43,3 +35,9 @@ class Converter:
         converted_snn = ann2snn.FXConverter(recipe).convert(model)
         
         return converted_snn
+
+__all__ = [
+    "recipes",
+    "eval_conv_snn",
+    "Converter"
+]
