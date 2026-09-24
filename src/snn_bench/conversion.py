@@ -31,14 +31,14 @@ class Converter:
     ['__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', '_download_without_resume', '_validate_download_response', 'download_url', 'logger', 'os', 're', 'requests', 'time', 'tqdm']
 
     """
-    def handle_rate_coded(model: nn.Module, train_dataset: Dataset, config: Config, mode: str ="max"):
+    def handle_rate_coded(model: nn.Module, train_dataset: Dataset, config: Config, mode: str ="max") -> nn.Module:
         calibration_data_loader = torch.utils.data.DataLoader(
             dataset=train_dataset, batch_size=config.batch_size, shuffle=False, drop_last=False
         )
         
         recipe = ann2snn.RateCodingRecipe(
             dataloader=calibration_data_loader,
-            mode="max",
+            mode=mode,
         )
         converted_snn = ann2snn.FXConverter(recipe).convert(model)
         
