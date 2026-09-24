@@ -9,6 +9,7 @@ from spikingjelly.activation_based import functional
 from spikingjelly.activation_based import neuron, encoding, functional, surrogate
 from spikingjelly import visualizing
 from matplotlib import pyplot as plt
+import numpy as np
 
 import timm
 import torchvision
@@ -18,10 +19,59 @@ from torchvision.transforms import v2
 
 import math
 from dataclasses import dataclass, field
-from typing import Sequence, Mapping, Any, Tuple, Optional, Callable
+from typing import Sequence, Mapping, Any, Tuple, Optional, Callable, Union
 
 Device = Union[torch.device, str]
 
+class SpikingReadout(nn.Module):
+    """IF neurons on the logits: firing rate ?= clip(logit / scale, 0, 1)."""
+    def __init__(self, scale: float):
+        super().__init__()
+        self.scale = scale
+        self.if_node = neuron.IFNode(v_threshold=1.0, v_reset=None)
+    def forward(self, x):
+        return self.if_node(x / self.scale)
+    
+
+def calibrate_scale(model, ds, T=32, n=1000, bs=200, device: Device = 'cuda'):
+    model.eval()
+    mx = float("-inf")
+    with torch.no_grad():
+        for i in range(0, n, bs):
+            xb = torch.stack([ds[j][0] for j in range(i, min(i + bs, n))]).to(device)
+            functional.reset_net(model)                 # reset per batch: state shape follows batch size
+            out = sum(model(xb) for _ in range(T)) / T  # [bs, num_classes] time-averaged logits
+            mx = max(mx, out.max().item())
+    functional.reset_net(model)
+    return mx
+
+def make_spiking_head(model, ds, T_cal=32, n=1000, device: Device = 'cuda'):
+    readout = SpikingReadout(calibrate_scale(model, ds, T_cal, n)).to(device)
+    return nn.Sequential(model, readout).eval(), readout
+
+def plot_readout(v, s, label):
+    T = len(s); rate = s.mean(0); pred = int(rate.argmax())
+    col = ['tab:green' if k == label else ('tab:red' if k == pred else 'gray') for k in range(10)]
+    fig, ax = plt.subplots(1, 3, figsize=(16, 4), gridspec_kw={'width_ratios': [3, 3, 1.5]})
+    im = ax[0].imshow(v.T, aspect='auto'); fig.colorbar(im, ax=ax[0])
+    ax[0].set(title='Membrane potential', xlabel='step', ylabel='neuron')
+    ax[1].eventplot([np.where(s[:, k])[0] for k in range(10)], lineoffsets=range(10), colors=col)
+    ax[1].set(title='Output spikes', xlabel='step', xlim=(-.5, T - .5)); ax[1].invert_yaxis()
+    ax[2].barh(range(10), rate, color=col); ax[2].invert_yaxis()
+    ax[2].set(title=f'Firing rate (label={label}, pred={pred})')
+    plt.tight_layout(); plt.show()
+    
+def run(snn_out, readout, img, T, device: Device = 'cuda'):
+    """Returns membrane potentials v and output spikes s, both [T,  num_classes]."""
+    x = img.reshape(1, 1, 28, 28).to(device)
+    functional.reset_net(snn_out)
+    v, s = [], []
+    with torch.no_grad():
+        for _ in range(T):
+            s.append(snn_out(x).squeeze(0).cpu())
+            v.append(readout.if_node.v.reshape(-1).cpu())
+    return torch.stack(v).numpy(), torch.stack(s).numpy()    
+    
 
 def try_visualize_converted(model: nn.Module, dataset: Dataset, T: int, index: int, device: Device = 'cuda', test_transforms: Optional[Sequence[Callable]] = None, figsize: Tuple[int, int] = (12, 8)):
     """
@@ -58,14 +108,14 @@ def try_visualize_converted(model: nn.Module, dataset: Dataset, T: int, index: i
         raise RuntimeError("No IFNode / LIFNode found in the model")
 
     # Storage for membrane potential and spikes
-    output_neuron.v_seq = []
-    output_neuron.s_seq = []
+    output_neuron.my_v_seq = []
+    output_neuron.my_s_seq = []
 
     def save_hook(m, x, y):
         # m.v is the membrane potential *after* the current step
         # y is the spike tensor
-        output_neuron.v_seq.append(m.v.detach().unsqueeze(0))
-        output_neuron.s_seq.append(y.detach().unsqueeze(0))
+        output_neuron.my_v_seq.append(m.v.detach().unsqueeze(0))
+        output_neuron.my_s_seq.append(y.detach().unsqueeze(0))
 
     hook = output_neuron.register_forward_hook(save_hook)
 
@@ -92,10 +142,10 @@ def try_visualize_converted(model: nn.Module, dataset: Dataset, T: int, index: i
         print(f"Predicted class (rate coding, T={T}): {pred}")
 
         # Concatenate recorded sequences
-        if len(output_neuron.v_seq) == 0:
+        if len(output_neuron.my_v_seq) == 0:
             raise RuntimeError("Hook collected no data - check that the correct neuron was selected")
-        v_t_array = torch.cat(output_neuron.v_seq).cpu().numpy().squeeze()  # [T, 10]
-        s_t_array = torch.cat(output_neuron.s_seq).cpu().numpy().squeeze()  # [T, 10]
+        v_t_array = torch.cat(output_neuron.my_v_seq).cpu().numpy().squeeze()  # [T, 10]
+        s_t_array = torch.cat(output_neuron.my_s_seq).cpu().numpy().squeeze()  # [T, 10]
 
         # Visualise
         dpi = 100
@@ -121,6 +171,9 @@ def try_visualize_converted(model: nn.Module, dataset: Dataset, T: int, index: i
 
     hook.remove()
     functional.reset_net(model)
+    
+    snn_out, readout = make_spiking_head(model, dataset)
+    plot_readout(*run(snn_out, readout, img, T=T, device=device), label)
     
     
 def trace_converted(model: nn.Module, img, T: int, device: Device = 'cuda', node_name: str ="classifier.spiking_1.if_node"):
@@ -157,14 +210,14 @@ def trace_converted(model: nn.Module, img, T: int, device: Device = 'cuda', node
     node = model.get_submodule(node_name)
 
     functional.reset_net(model)                 # reset FIRST
-    v_seq, s_seq = [], []                        # local lists, captured by closure
+    my_v_seq, my_s_seq = [], []                        # local lists, captured by closure
 
     def save_hook(m, x, y):
         v = m.v
         if not torch.is_tensor(v) or v.dim() == 0:
             v = torch.zeros_like(y)              # first-step placeholder
-        v_seq.append(v.detach().cpu())
-        s_seq.append(y.detach().cpu())
+        my_v_seq.append(v.detach().cpu())
+        my_s_seq.append(y.detach().cpu())
 
     h = node.register_forward_hook(save_hook)
     with torch.no_grad():
@@ -174,8 +227,8 @@ def trace_converted(model: nn.Module, img, T: int, device: Device = 'cuda', node
     h.remove()
     functional.reset_net(model)
 
-    v = torch.cat(v_seq).numpy().squeeze()       # [T, 10]
-    s = torch.cat(s_seq).numpy().squeeze()
+    v = torch.cat(my_v_seq).numpy().squeeze()       # [T, 10]
+    s = torch.cat(my_s_seq).numpy().squeeze()
     return v.T, s.T                               # -> [neuron, step]
 
 

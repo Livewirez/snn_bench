@@ -48,11 +48,11 @@ def plot_snn_module_spikes(
     functional.reset_net(snn)
     # Register a hook
     output_layer = snn.get_output_layer() # Output layer
-    output_layer.v_seq = []
-    output_layer.s_seq = []
+    output_layer.my_v_seq = []
+    output_layer.my_s_seq = []
     def save_hook(m, x, y):
-        m.v_seq.append(m.v.unsqueeze(0))
-        m.s_seq.append(y.unsqueeze(0))
+        m.my_v_seq.append(m.v.unsqueeze(0))
+        m.my_s_seq.append(y.unsqueeze(0))
 
     hook = output_layer.register_forward_hook(save_hook)
 
@@ -96,10 +96,10 @@ def plot_snn_module_spikes(
                 out_fr += snn(encoded_img)
             out_spikes_counter_frequency = (out_fr / T).cpu().numpy()
 
-        output_layer.v_seq = torch.cat(output_layer.v_seq)
-        output_layer.s_seq = torch.cat(output_layer.s_seq)
-        v_t_array = output_layer.v_seq.cpu().numpy().squeeze()  # v_t_array[i][j] represents the voltage value of neuron i at time j
-        s_t_array = output_layer.s_seq.cpu().numpy().squeeze()  # s_t_array[i][j] represents the spike fired by neuron i at time j, which is either 0 or 1
+        output_layer.my_v_seq = torch.cat(output_layer.my_v_seq)
+        output_layer.my_s_seq = torch.cat(output_layer.my_s_seq)
+        v_t_array = output_layer.my_v_seq.cpu().numpy().squeeze()  # v_t_array[i][j] represents the voltage value of neuron i at time j
+        s_t_array = output_layer.my_s_seq.cpu().numpy().squeeze()  # s_t_array[i][j] represents the spike fired by neuron i at time j, which is either 0 or 1
 
         # Heatmap of membrane potentials and spike output results
         dpi = 100
@@ -291,11 +291,11 @@ def trace_neuron(snn: nn.Module, node, img, T: int, device: torch.device):
     
     """
     snn = snn.to(device).eval()
-    v_seq, s_seq = [], []
+    my_v_seq, my_s_seq = [], []
 
     def hook(m, x, y):
-        v_seq.append(m.v.detach().float().cpu().unsqueeze(0))   # membrane BEFORE reset
-        s_seq.append(y.detach().float().cpu().unsqueeze(0))     # output spikes (0/1)
+        my_v_seq.append(m.v.detach().float().cpu().unsqueeze(0))   # membrane BEFORE reset
+        my_s_seq.append(y.detach().float().cpu().unsqueeze(0))     # output spikes (0/1)
 
     h = node.register_forward_hook(hook)
     functional.reset_net(snn)
@@ -306,8 +306,8 @@ def trace_neuron(snn: nn.Module, node, img, T: int, device: torch.device):
     functional.reset_net(snn)
     h.remove()
 
-    v = torch.cat(v_seq).numpy().squeeze() # [T, n_neurons]
-    s = torch.cat(s_seq).numpy().squeeze()
+    v = torch.cat(my_v_seq).numpy().squeeze() # [T, n_neurons]
+    s = torch.cat(my_s_seq).numpy().squeeze()
     return v.T, s.T   # transpose -> [neuron, step] for the plotters
 
 def plot_loss_curves(epoch, loss_train_store, loss_cv_store, accuracy_rate_train_store, accuracy_rate_cv_store):
