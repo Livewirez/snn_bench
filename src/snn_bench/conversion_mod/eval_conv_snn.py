@@ -102,7 +102,8 @@ def try_visualize_converted(model: nn.Module, dataset: Dataset, T: int, index: i
     # (for the structure you printed it is classifier.spiking_1.if_node)
     output_neuron = None
     for name, module in model.named_modules():
-        if isinstance(module, neuron.IFNode) or isinstance(module, neuron.LIFNode):
+        # if isinstance(module, neuron.IFNode) or isinstance(module, neuron.LIFNode):
+        if isinstance(module, neuron.BaseNode):
             output_neuron = module   # keep the last one we encounter
     if output_neuron is None:
         raise RuntimeError("No IFNode / LIFNode found in the model")
