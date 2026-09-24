@@ -64,10 +64,10 @@ class TrainOptions:
     def get_default(cls) -> "TrainOptions":
         return cls(
             criterion=nn.CrossEntropyLoss(label_smoothing=0.1),
-            optimizer=lambda params: torch.optim.AdamW(
+            optimizer=lambda params, lr=1e-3, weight_decay=1e-4: torch.optim.AdamW(
                 params,
-                lr=1e-3,
-                weight_decay=1e-4,
+                lr=lr,
+                weight_decay=weight_decay,
             ),
         )
 
@@ -211,7 +211,7 @@ def train_model(
 
     # Phase 2 (or full training for no backbone models)
     optimizer = (
-        options.optimizer(model.parameters())
+        options.optimizer(model.parameters(), lr=1e-4 if backbone is None else 1e-5, weight_decay=0.01)
         if options.optimizer is not None
         else torch.optim.AdamW(model.parameters(), lr=1e-4 if backbone is None else 1e-5)
     )
