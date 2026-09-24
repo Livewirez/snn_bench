@@ -30,7 +30,7 @@ from . import data, benchmark, config, constants  # always importable (pure torc
 # direct_snn and convert need SpikingJelly; import lazily so the package still
 # loads on a machine without it.
 try:
-    from . import models, conversion_mod, conversion, evaluate, train    # noqa: F401
+    from . import models, conversion_mod, conversion, evaluate, train, evaluate    # noqa: F401
     _SPIKINGJELLY = True
 except Exception as err:  # pragma: no cover - depends on optional dependency
     print(f"Unexpected {err=}, {type(err)=}")
@@ -38,7 +38,7 @@ except Exception as err:  # pragma: no cover - depends on optional dependency
     raise
 
 __all__ = [
-    "data", "benchmark", "config", "constants", "models",
+    "data", "benchmark", "config", "constants", "models", "train", "evaluate",
     "conversion_mod", "conversion", "evaluate", "train",  "__version__",
     "Device"
 ]
