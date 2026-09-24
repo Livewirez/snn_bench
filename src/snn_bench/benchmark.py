@@ -192,6 +192,15 @@ __all__ = [
     "accuracy_retention",
     "best_retention",
     "plot_accuracy_retention",
-    "plot_retention_vs_energy"
+    "plot_retention_vs_energy",
+    
+        
+    "profile_ann",
+    "totals_at",
+    "ann_baseline",
+    "build_totals",
+    "memory_summary",
+    "plot_totals",
+    "plot_memory_accesses"
 ]
 
