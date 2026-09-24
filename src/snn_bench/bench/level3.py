@@ -4,6 +4,8 @@ import math
 import time
 import threading
 import copy
+import psutil
+import pynvml
  
 import torch
 import torch.nn as nn
