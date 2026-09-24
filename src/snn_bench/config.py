@@ -33,5 +33,11 @@ class Config:
     early_stop_patience: int  = 5
     freeze_epoch_limit: int  = 5
     max_epoch_limit: int = 30
-    model_auto_save_dir: str = './model_save/auto_save/'
-    model_history_save_dir: str = './model_save/history_save/'
+    model_auto_save_dir: str = './model_save/auto_save'
+    model_history_save_dir: str = './model_save/history_save'
+    
+    def create_path(path_str: str) -> Path:
+        path = Path(path_str)
+        path.mkdir(parents=True, exist_ok=True)
+        
+        return path

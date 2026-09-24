@@ -149,7 +149,9 @@ def train_model(model: nn.Module, train_loader: DataLoader, val_loader: DataLoad
     best_val_loss   = float("inf")
     EARLY_STOP_COUNTER  = config.early_stop_counter
     EARLY_STOP_PATIENCE  = config.early_stop_patience
-    CHECKPOINT_PATH = config.checkpoint_dir / f"best_{model_name.replace(' ', '_')}.pth"
+    
+    CHECKPOINT_DIR = Config.create_path(config.checkpoint_dir) 
+    CHECKPOINT_PATH = CHECKPOINT_DIR / f"best_{model_name.replace(' ', '_')}.pth"
 
     # Phase 1: freeze backbone(base_model), train classifier head
     backbone = get_backbone(model)

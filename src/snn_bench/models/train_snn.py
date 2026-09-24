@@ -78,6 +78,8 @@ def start_training_snn_loop(model: nn.Module, train_dataloader: DataLoader, test
     # Set the number of training rounds
     # epoch = 5
     
+    AUTOSAVE_DIR = Config.create_path(config.model_auto_save_dir)
+    
     loss_fn = (
         options.criterion if options.criterion is not None
         else nn.CrossEntropyLoss()
@@ -216,7 +218,7 @@ def start_training_snn_loop(model: nn.Module, train_dataloader: DataLoader, test
         # Automatically save neural network models whose accuracy during training exceeds that of previous models
 
         if (accuracy_rate_train + accuracy_rate_cv > accuracy_rate_train_max + accuracy_rate_cv_max):
-            torch.save(model, config.model_auto_save_dir + "model_auto_save_acc%d.pth" %accuracy_rate_cv)
+            torch.save(model, AUTOSAVE_DIR / "model_auto_save_acc%d.pth" %accuracy_rate_cv)
             accuracy_rate_train_max = accuracy_rate_train  # Record the maximum training accuracy
             accuracy_rate_cv_max = accuracy_rate_cv  # Record the maximum validation accuracy
 
