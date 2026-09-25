@@ -42,6 +42,7 @@ from .bench import (
     best_retention,
     plot_accuracy_retention,
     plot_retention_vs_energy,
+    crossing_points,
     
     profile_ann,
     totals_at,
@@ -160,6 +161,9 @@ class Benchmark:
         return plot_retention_vs_energy(
             df, summaries, E_ann
         )
+        
+    def crossing_points(ann_result: Union[Dict, pd.DataFrame], summary: pd.DataFrame, acc_tolerance: float = 0.01) -> Dict:
+        return crossing_points(ann_result, summary, acc_tolerance)
         
         
         

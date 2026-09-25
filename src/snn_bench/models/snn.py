@@ -22,20 +22,20 @@ class DirectSNN(SNNModule):
         surr = surrogate.ATan()
 
         self.features = nn.Sequential(
-            # Block 1  (matches ANN: 32 filters, 3×3, pool/2)
+            # Block 1  (matches ANN: 32 filters, 3x3, pool/2)
             layer.Conv2d(1, 32, kernel_size=3, stride=1, padding=1, bias=False),
             neuron.LIFNode(tau=tau, surrogate_function=surr),
-            layer.MaxPool2d(kernel_size=2),   # 28 → 14
+            layer.MaxPool2d(kernel_size=2),   # 28 -> 14
 
-            # Block 2  (matches ANN: 64 filters, 3×3, pool/2)
+            # Block 2  (matches ANN: 64 filters, 3x3, pool/2)
             layer.Conv2d(32, 64, kernel_size=3, stride=1, padding=1, bias=False),
             neuron.LIFNode(tau=tau, surrogate_function=surr),
-            layer.MaxPool2d(kernel_size=2),   # 14 → 7
+            layer.MaxPool2d(kernel_size=2),   # 14 -> 7
         )
 
         self.classifier = nn.Sequential(
             layer.Flatten(),
-            # 64 * 7 * 7 = 3136  (for 28×28 input)
+            # 64 * 7 * 7 = 3136  (for 28x28 input)
             layer.Linear(64 * 7 * 7, 512, bias=False),
             neuron.LIFNode(tau=tau, surrogate_function=surr),
             # optional: layer.Dropout(0.4)

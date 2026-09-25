@@ -89,8 +89,8 @@ def get_loaders(
     # to_tensor = [v2.Compose([v2.ToTensor()])]  # pixels in [0, 1]
     to_tensor = [v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]  # pixels in [0, 1]
 
-    train_tf = v2.Compose([*(train_transforms or []), *to_tensor])  # user transforms first, conversion last
-    eval_tf  = v2.Compose([*(test_transforms or []), *to_tensor])  # no augmentation
+    train_tf = v2.Compose([*(train_transforms or to_tensor)])  # user transforms first, conversion last
+    eval_tf  = v2.Compose([*(test_transforms or to_tensor)])  # no augmentation
     
     train_set = cls(root=root, train=True,  download=True, transform=train_tf)
     test_full = cls(root=root, train=False, download=True, transform=eval_tf)

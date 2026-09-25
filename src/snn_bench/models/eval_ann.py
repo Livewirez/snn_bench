@@ -235,10 +235,24 @@ def visualize_predictions_colored(original_image, probabilities, class_names, re
     # --------------------------------------------------
     # Prepare image for matplotlib
     # --------------------------------------------------
+    # if isinstance(original_image, torch.Tensor):
+    #     original_image = original_image.detach().cpu().squeeze().numpy()
+    # else:
+    #     original_image = np.asarray(original_image).squeeze()
+        
     if isinstance(original_image, torch.Tensor):
-        original_image = original_image.detach().cpu().squeeze().numpy()
+        img = original_image.detach().cpu()
+        if img.ndim == 4:
+            img = img.squeeze(0)          # (1, C, H, W) -> (C, H, W); 
+        if img.ndim == 3 and img.shape[0] in (1, 3, 4):
+            img = img.permute(1, 2, 0)    # (C, H, W) -> (H, W, C)
+        img = img.clamp(0, 1).numpy()
+        if img.ndim == 3 and img.shape[-1] == 1:
+            img = img.squeeze(-1)         # (H, W, 1) -> (H, W) for true grayscale
     else:
-        original_image = np.asarray(original_image).squeeze()
+        img = np.asarray(original_image).squeeze()
+        
+    original_image = img
 
     # --------------------------------------------------
     # Prediction
