@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader, random_split
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Iterable
 
 from .config import DEVICE
 
@@ -57,7 +57,7 @@ class Benchmark:
     def run(
         ann_model: nn.Module, snn_models: Dict[str, nn.Module], 
         test_dataloader: DataLoader, device: Union[torch.device, str] = DEVICE,
-        at_T: int = 32, **run_benchmark_args
+        at_T: int | Iterable[int] | None = None, **run_benchmark_args
     ):
         ann_result = profile_ann(ann_model, test_dataloader, device)
         #   ann["accuracy"]   -> float, e.g. 0.9864
@@ -82,16 +82,16 @@ class Benchmark:
     def build_totals(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]]) -> pd.DataFrame:
         return build_totals(ann_result, models)
     
-    def totals_at(totals: pd.DataFrame, at_T: int) -> pd.DataFrame:
+    def totals_at(totals: pd.DataFrame, at_T: int | Iterable[int] | None = None) -> pd.DataFrame:
         return totals_at(totals, at_T)
         
-    def plot_totals(ann_result: Dict, totals: pd.DataFrame, at_T: int = 32):
+    def plot_totals(ann_result: Dict, totals: pd.DataFrame, at_T: int | Iterable[int] | None = None):
         return plot_totals(ann_result, totals, at_T)
         
-    def plot_memory_accesses(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]], at_T: int = 32):
+    def plot_memory_accesses(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]], at_T: int | Iterable[int] | None = None):
         return plot_memory_accesses(ann_result, models, at_T)
         
-    def memory_summary(ann_result: Dict, totals: pd.DataFrame, at_T: int = 32) -> pd.DataFrame:
+    def memory_summary(ann_result: Dict, totals: pd.DataFrame, at_T: int | Iterable[int] | None = None) -> pd.DataFrame:
         return memory_summary(ann_result, totals, at_T)
     
     def run_benchmark(
