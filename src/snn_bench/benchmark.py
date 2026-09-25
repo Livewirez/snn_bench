@@ -80,6 +80,8 @@ class Benchmark:
         plot_totals(ann_result, totals, at_T=at_T)
         plot_memory_accesses(ann_result, models, at_T=at_T)
         
+        return ann_result, totals, models
+        
     def build_totals(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]]) -> pd.DataFrame:
         return build_totals(ann_result, models)
     
