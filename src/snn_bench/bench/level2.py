@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from ..config import DEVICE
 from typing import Dict, List, Optional, Tuple, Union
 from . import sram_access_energy, profile_topology
 from .types import LayerSpec, EnergyModel, SYNAPTIC_TYPES, NEURON_TYPES, INT32_MODEL,BYTES_PER_WORD, E_ADD_FP32
@@ -155,7 +156,7 @@ def analytical_energy(specs: List[LayerSpec], T: int, em: EnergyModel = INT32_MO
  
  
 def ann_baseline(
-    ann: nn.Module, example_input: torch.Tensor, device: Union[torch.device, str],
+    ann: nn.Module, example_input: torch.Tensor, device: Union[torch.device, str] = DEVICE,
     em: EnergyModel = INT32_MODEL
 ) -> Tuple[Dict, pd.DataFrame]:
     """

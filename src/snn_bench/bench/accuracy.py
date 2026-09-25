@@ -54,8 +54,6 @@ Source = Union[nn.Module, pd.DataFrame, float]
 
 
 def _label(ratio: float) -> str:
-    """'1.02x (+2.1%)' / '0.96x (-4.2%)'. A ratio below 1 is 0.96x, never
-    -0.96x."""
     if np.isnan(ratio):
         return "n/a"
     return f"{ratio:.2f}x ({100 * (ratio - 1):+.1f}%)"

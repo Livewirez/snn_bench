@@ -411,7 +411,7 @@ from .level3 import (
 )
 
 
-from .accuracy_retention import (
+from .accuracy import (
     Source,
     
     _label,
@@ -465,6 +465,7 @@ __all__ = [
     
     "Source",
     "_label",
+    "accuracy",
     "accuracy_retention",
     "best_retention",
     "plot_accuracy_retention",
@@ -474,7 +475,7 @@ __all__ = [
     "plot_ann",
     "plot_comparison",
     "comparison_table",
-    "crossing_points"
+    "crossing_points",
     
     "build_totals",
     "totals_at",

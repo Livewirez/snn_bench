@@ -25,15 +25,15 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from .types import LayerSpec, SYNAPTIC_TYPES, NEURON_TYPES
-
+from ..config import DEVICE
 
 from spikingjelly.activation_based import neuron, functional
 
 def count_activity(
     model: nn.Module, specs: List[LayerSpec], loader, T: int,
-    device, max_batches: Optional[int] = None
+    device: Union[torch.device, str] = DEVICE, max_batches: Optional[int] = None
 ) -> List[LayerSpec]:
     """
     Per sample, summed over all T timesteps:

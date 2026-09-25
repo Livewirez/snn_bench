@@ -354,4 +354,3 @@ def test_eval(model, index, dataset, config, transforms=None):
         class_names,
         str(label)
     )
-
