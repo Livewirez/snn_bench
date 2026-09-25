@@ -300,7 +300,6 @@ def plot_comparison(
 
 
 def comparison_table(ann_result: Dict, snn_summaries: Dict[str, pd.DataFrame]) -> pd.DataFrame:
-    """One tidy frame: the ANN row plus every SNN row, ready for the write-up."""
     cols = ["model", "T", "accuracy", "E_analytical", "E_mem", "E_ops", "E_addr",
             "mac", "mem_ops", "spikes_per_neuron", "E_ratio_ann_over_snn",
             "time_per_sample_ms", "E_gpu_marginal_per_sample"]
@@ -330,15 +329,26 @@ def comparison_table(ann_result: Dict, snn_summaries: Dict[str, pd.DataFrame]) -
     return out.reindex(columns=cols)
 
 
-def crossing_points(ann_result: Dict, summary: pd.DataFrame, acc_tolerance: float = 0.01) -> Dict:
+def crossing_points( ann_result: Union[Dict, pd.DataFrame], summary: pd.DataFrame, acc_tolerance: float = 0.01) -> Dict:
     """
-    The three numbers your results chapter needs:
-      T_energy   -- smallest T where the SNN stops beating the ANN on energy
-      T_1p72     -- smallest T where spikes/neuron exceeds 1.72
-      T_accuracy -- smallest T reaching within `acc_tolerance` of ANN accuracy
+    Main  Results:
+    T_energy   -- smallest T where the SNN stops beating the ANN on energy
+    T_1p72     -- smallest T where spikes/neuron exceeds 1.72
+    T_accuracy -- smallest T reaching within `acc_tolerance` of ANN accuracy
 
     If T_accuracy > T_energy, rate-coded conversion cannot win on this model.
     """
+    if isinstance(ann_result, pd.DataFrame):
+        if len(ann_result) != 1:
+            raise ValueError(
+                f"Expected a single-row DataFrame for ann_result, got {len(ann_result)} rows"
+            )
+        ann_accuracy = float(ann_result["accuracy"].iloc[0])
+    elif isinstance(ann_result, dict):
+        ann_accuracy = float(ann_result["accuracy"])
+    else:
+        raise TypeError(f"ann_result must be Dict or pd.DataFrame, got {type(ann_result)}")
+
     d = summary.sort_values("T")
     out = {"T_energy_breakeven": np.nan, "T_1p72": np.nan, "T_accuracy": np.nan}
 
@@ -351,17 +361,14 @@ def crossing_points(ann_result: Dict, summary: pd.DataFrame, acc_tolerance: floa
         out["T_1p72"] = int(over["T"].iloc[0])
 
     if "accuracy" in d.columns and d["accuracy"].notna().any():
-        target = ann_result["accuracy"] - acc_tolerance
+        target = ann_accuracy - acc_tolerance
         ok = d[d["accuracy"] >= target]
         if len(ok):
             out["T_accuracy"] = int(ok["T"].iloc[0])
 
     out["verdict"] = (
-        "SNN never reaches ANN accuracy in the swept range"
-        if np.isnan(out["T_accuracy"]) else
-        "usable accuracy costs more energy than the ANN"
-        if (not np.isnan(out["T_energy_breakeven"])
-            and out["T_accuracy"] >= out["T_energy_breakeven"]) else
-        "SNN wins on both accuracy and energy"
+        "SNN never reaches ANN accuracy in the swept range" if np.isnan(out["T_accuracy"]) 
+        else "usable accuracy costs more energy than the ANN" if (not np.isnan(out["T_energy_breakeven"]) and out["T_accuracy"] >= out["T_energy_breakeven"]) 
+        else "SNN wins on both accuracy and energy"
     )
     return out
