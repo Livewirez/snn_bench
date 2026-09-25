@@ -8,16 +8,23 @@ and Energy Efficiency in ANN to SNN Conversion".
 Components (one module each, independently testable):
     data        -- dataset ingestion (MNIST, FashionMNIST, ...), ImageDataset 
     models      -- [
-        ann         -- ANN model + training/evaluation
-        direct_snn  -- direct SNN training with surrogate gradients (SpikingJelly)
+        ann         -- ANN models
+        snn         -- direct SNNs (SpikingJelly)
+        train_ann   -- method for training ann
+        train_snn   -- method for training SNNs using Surrogate Gradient
+        eval_ann    -- evaluate ann results (loss curves, confusion matrix)
+        eval_snn    -- evaluate snn results
+        types       -- type definitions
     ]
-    convert     -- ANN -> SNN conversion (rate coding, max / 99.9% normalisation)
-    evaluate    -- accuracy + per-layer spike counting
-    energy      -- analytical energy (Lemaire AC/MAC + memory) + Davidson-Furber check
-    plots       -- result visualisation (accuracy-vs-latency, spikes, energy)
+    constants   -- constants that show if certain dependencies exist
+    config      -- contains hypeparameters and ither variables for training and saving metadata
+    bench       -- components for benchmarking metrics and plotiing results (accuracy-vs-latency, spikes, energy)
+    convert     -- ANN -> SNN conversion (rate coding, max / 99.9% normalisation) [Uses Spiking Jelly]
+    evaluate    -- evaluating model results
+    train       -- methods for training anns and snns
 """
 
-__version__ = "0.1.70"
+__version__ = "0.1.72"
 
 
 from typing import Union

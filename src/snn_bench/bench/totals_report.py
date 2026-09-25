@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Tuple, Optional, List
+from typing import Dict, Tuple, Optional, List, Union, Iterable
 
 import numpy as np
 import pandas as pd
@@ -63,101 +63,116 @@ def build_totals(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[in
     return pd.DataFrame(rows)
 
 
-def totals_at(totals: pd.DataFrame, at_T: int) -> pd.DataFrame:
-    """The ANN row plus every model's row at one chosen T."""
-    return pd.concat([totals[totals["T"].isna()], totals[totals["T"] == at_T]], ignore_index=True)
+def totals_at(totals: pd.DataFrame, at_T: Union[int, Iterable[int], None] = None) -> pd.DataFrame:
+    """ANN row plus model rows at the requested T values. at_T=None means every T in the sweep."""
+    ann_row = totals[totals["T"].isna()]
+    swept = totals[totals["T"].notna()]
+    if at_T is not None:
+        value = [at_T] if isinstance(at_T, (int, float)) else list(at_T)
+        swept = swept[swept["T"].isin(value)]
+    return pd.concat([ann_row, swept.sort_values(["model", "T"])], ignore_index=True)
 
 
-def plot_totals(ann_result: Dict, totals: pd.DataFrame, at_T: int = 32):
-    """Side-by-side totals for the ANN and every SNN at one operating point,
-    plus the component curves across T."""
+def plot_totals(ann_result: Dict, totals: pd.DataFrame, at_T: Union[int, Iterable[int], None] = None):
+    """Side-by-side totals for the ANN and every SNN, Totals across the whole sweep. at_T=None uses every T."""
     snap = totals_at(totals, at_T)
-    labels = [f"{m}" if np.isnan(t) else f"{m}\nT={int(t)}" for m, t in zip(snap["model"], snap["T"])]
-    idx = np.arange(len(snap))
-
-    # 1. total energy, split into Lemaire's three components
-    fig, ax = plt.subplots(figsize=(8, 4.8))
-    ax.bar(idx, snap["E_mem"], label=r"$E_{mem}$", color="C0")
-    ax.bar(idx, snap["E_ops"], bottom=snap["E_mem"], label=r"$E_{ops}$", color="C1")
-    ax.bar(idx, snap["E_addr"], bottom=snap["E_mem"] + snap["E_ops"], label=r"$E_{addr}$", color="C2")
-    for i, v in enumerate(snap["E_total"]):
-        ax.annotate(f"{v:.2e} J", (i, v), ha="center", textcoords="offset points", xytext=(0, 4), fontsize=9)
-    ax.set_yscale("log")
-    ax.set_xticks(idx); ax.set_xticklabels(labels, fontsize=9)
-    ax.set_ylabel("Energy per inference (J)")
-    ax.set_title(f"Total analytical energy (T = {at_T})")
-    ax.legend(); ax.grid(True, axis="y", alpha=0.3)
-    fig.tight_layout(); plt.show()
-
-    # 2. where each model's energy sits, as shares
-    fig, ax = plt.subplots(figsize=(8, 4))
-    share = snap[["E_mem", "E_ops", "E_addr"]].div(snap["E_total"], axis=0) * 100
-    left = np.zeros(len(snap))
-    for col, c in zip(["E_mem", "E_ops", "E_addr"], ["C0", "C1", "C2"]):
-        ax.barh(idx, share[col], left=left, color=c, label=col)
-        for i, (v, l) in enumerate(zip(share[col], left)):
-            if v > 6:
-                ax.annotate(f"{v:.0f}%", (l + v / 2, i), ha="center", va="center", fontsize=9, color="white")
-        left += share[col].values
-    ax.set_yticks(idx); ax.set_yticklabels(labels, fontsize=9)
-    ax.set_xlabel("Share of total energy (%)"); ax.set_xlim(0, 100)
-    ax.set_title(f"Energy composition (T = {at_T})")
-    ax.legend(loc="lower right"); ax.grid(True, axis="x", alpha=0.3)
-    fig.tight_layout(); plt.show()
-
-    # 3. operation counts, all four kinds
-    fig, ax = plt.subplots(figsize=(9, 4.5))
-    w = 0.2
-    for k, (col, lab) in enumerate([("mac", "MACs"), ("acc", "ACCs"), ("mem_reads", "reads"), ("mem_writes", "writes")]):
-        vals = snap[col].replace(0, np.nan)
-        ax.bar(idx + (k - 1.5) * w, vals, w, label=lab, color=f"C{k}")
-    ax.set_yscale("log")
-    ax.set_xticks(idx); ax.set_xticklabels(labels, fontsize=9)
-    ax.set_ylabel("Operations per inference")
-    ax.set_title(f"Operation totals (T = {at_T}; zero bars omitted)")
-    ax.legend(); ax.grid(True, axis="y", alpha=0.3)
-    fig.tight_layout(); plt.show()
-
-    # 4. component energies across the whole sweep
+    swept = totals[totals["T"].notna()]
+    all_T = sorted(swept["T"].unique().astype(int))
     E_ann = ann_result["totals"]
-    sweeps = totals[totals["T"].notna()]
-    all_T = sorted(sweeps["T"].unique().astype(int))
-    fig, axes = plt.subplots(1, 3, figsize=(14, 4), sharex=True)
-    for ax, comp, ann_v in zip(axes, ["E_mem", "E_ops", "E_total"], [E_ann["E_mem"], E_ann["E_ops"], E_ann["E_total"]]):
-        for i, (name, g) in enumerate(sweeps.groupby("model")):
-            g = g.sort_values("T")
-            ax.plot(g["T"], g[comp], "o-", lw=2, ms=5, color=f"C{i}", label=name)
-        ax.axhline(ann_v, color="k", ls="--", lw=2, label="ANN")
-        ax.set_yscale("log"); ax.set_xscale("log", base=2)
-        ax.set_xticks(all_T); ax.set_xticklabels(all_T)
-        ax.set_xlabel("Timesteps (T)"); ax.set_title(comp)
-        ax.grid(True, alpha=0.3)
-    axes[0].set_ylabel("Energy per inference (J)")
-    axes[-1].legend(fontsize=8)
-    fig.suptitle("Energy components vs timesteps")
-    fig.tight_layout(); plt.show()
-
-
-# MEMORY ACCESS PLOTS
-def plot_memory_accesses(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]], at_T: int = 32):
-    """
-    Memory Traffic.
-    """
-    a_layers = ann_result["per_layer"]
-    a_rd, a_wr = float(a_layers["rd"].sum()), float(a_layers["wr"].sum())
-    a_total = a_rd + a_wr
-    all_T = sorted({int(t) for s, _ in models.values() for t in s["T"]})
 
     def _x(ax):
         ax.set_xscale("log", base=2); ax.set_xticks(all_T)
         ax.set_xticklabels(all_T); ax.grid(True, alpha=0.3)
 
+    # 1. stacked energy, every model at every T, ANN as a leading group
+    labels = [m if np.isnan(t) else f"{m.split(' (')[0]}\nT={int(t)}"
+              for m, t in zip(snap["model"], snap["T"])]
+    idx = np.arange(len(snap))
+    fig, ax = plt.subplots(figsize=(max(9, 0.55 * len(snap)), 5))
+    ax.bar(idx, snap["E_mem"], label=r"$E_{mem}$", color="C0")
+    ax.bar(idx, snap["E_ops"], bottom=snap["E_mem"], label=r"$E_{ops}$", color="C1")
+    ax.bar(idx, snap["E_addr"], bottom=snap["E_mem"] + snap["E_ops"],
+           label=r"$E_{addr}$", color="C2")
+    ax.axhline(E_ann["E_total"], color="k", ls="--", lw=1.5, label="ANN total")
+    ax.set_yscale("log")
+    ax.set_xticks(idx); ax.set_xticklabels(labels, fontsize=7, rotation=90)
+    ax.set_ylabel("Energy per inference (J)")
+    ax.set_title("Total analytical energy, full run")
+    ax.legend(fontsize=8); ax.grid(True, axis="y", alpha=0.3)
+    fig.tight_layout(); plt.show()
+
+    # 2. memory share vs T (replaces the single-T composition bar)
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    for i, (name, g) in enumerate(swept.groupby("model")):
+        g = g.sort_values("T")
+        ax.plot(g["T"], g["pct_E_mem"], "o-", lw=2, ms=6, color=f"C{i}", label=name)
+    ax.axhline(100 * E_ann["E_mem"] / E_ann["E_total"], color="k", ls="--",
+               lw=2, label="ANN")
+    ax.set_ylim(0, 105)
+    ax.set_xlabel("Timesteps (T)")
+    ax.set_ylabel(r"$E_{mem}$ share of total (%)")
+    ax.set_title("Memory's share of energy"); ax.legend(fontsize=8); _x(ax)
+    fig.tight_layout(); plt.show()
+
+    # 3. operation counts vs T, one panel each
+    fig, axes = plt.subplots(2, 2, figsize=(12, 7), sharex=True)
+    panels = [
+        ("mac", "MACs", E_ann["mac"]), 
+        ("acc", "ACCs", E_ann["acc"]),
+        ("mem_reads", "Memory reads", E_ann["rd"]),
+        ("mem_writes", "Memory writes", E_ann["wr"])
+    ]
+    for ax, (col, title, ann_v) in zip(axes.ravel(), panels):
+        for i, (name, g) in enumerate(swept.groupby("model")):
+            g = g.sort_values("T")
+            ax.plot(g["T"], g[col].replace(0, np.nan), "o-", lw=2, ms=5, color=f"C{i}", label=name)
+        if ann_v > 0:
+            ax.axhline(ann_v, color="k", ls="--", lw=2, label="ANN")
+        ax.set_yscale("log"); ax.set_title(title); _x(ax)
+    axes[1, 0].set_xlabel("Timesteps (T)"); axes[1, 1].set_xlabel("Timesteps (T)")
+    axes[0, 0].set_ylabel("Operations per inference")
+    axes[1, 0].set_ylabel("Operations per inference")
+    axes[0, 1].legend(fontsize=8)
+    fig.suptitle("Operation totals vs timesteps")
+    fig.tight_layout(); plt.show()
+
+    # 4. component energies vs T
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4), sharex=True)
+    for ax, comp, ann_v in zip(axes, ["E_mem", "E_ops", "E_total"], [E_ann["E_mem"], E_ann["E_ops"], E_ann["E_total"]]):
+        for i, (name, g) in enumerate(swept.groupby("model")):
+            g = g.sort_values("T")
+            ax.plot(g["T"], g[comp], "o-", lw=2, ms=5, color=f"C{i}", label=name)
+        ax.axhline(ann_v, color="k", ls="--", lw=2, label="ANN")
+        ax.set_yscale("log"); ax.set_xlabel("Timesteps (T)")
+        ax.set_title(comp); _x(ax)
+    axes[0].set_ylabel("Energy per inference (J)")
+    axes[-1].legend(fontsize=8)
+    fig.suptitle("Energy components vs timesteps")
+    fig.tight_layout(); plt.show()
+
+# MEMORY ACCESS PLOTS
+def plot_memory_accesses(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]],at_T: Union[int, Iterable[int], None] = None):
+    """Memory traffic across the un. at_T=None uses every T."""
+    a_layers = ann_result["per_layer"]
+    a_rd, a_wr = float(a_layers["rd"].sum()), float(a_layers["wr"].sum())
+    a_total = a_rd + a_wr
+    all_T = sorted({int(t) for _, f in models.values() for t in f})
+    if at_T is not None:
+        want = [at_T] if isinstance(at_T, (int, float)) else list(at_T)
+        all_T = [t for t in all_T if t in want]
+
+    def _x(ax):
+        ax.set_xscale("log", base=2); ax.set_xticks(all_T)
+        ax.set_xticklabels(all_T); ax.grid(True, alpha=0.3)
+
+    def _acc(frames, T):
+        return float(frames[T]["snn_rd"].sum() + frames[T]["snn_wr"].sum())
+
     # 1. total memory accesses vs T
     fig, ax = plt.subplots(figsize=(8, 4.5))
-    for i, (name, (summary, frames)) in enumerate(models.items()):
-        Ts = sorted(frames)
-        acc = [frames[T]["snn_rd"].sum() + frames[T]["snn_wr"].sum() for T in Ts]
-        ax.plot(Ts, acc, "o-", lw=2, ms=6, color=f"C{i}", label=name)
+    for i, (name, (_, frames)) in enumerate(models.items()):
+        Ts = [t for t in sorted(frames) if t in all_T]
+        ax.plot(Ts, [_acc(frames, t) for t in Ts], "o-", lw=2, ms=6, color=f"C{i}", label=name)
     ax.axhline(a_total, color="k", ls="--", lw=2, label=f"ANN ({a_total:,.0f})")
     ax.set_yscale("log"); ax.set_xlabel("Timesteps (T)")
     ax.set_ylabel("Memory accesses per inference")
@@ -166,95 +181,99 @@ def plot_memory_accesses(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame,
 
     # 2. how many times more traffic than the ANN
     fig, ax = plt.subplots(figsize=(8, 4.5))
-    for i, (name, (summary, frames)) in enumerate(models.items()):
-        Ts = sorted(frames)
-        amp = [(frames[T]["snn_rd"].sum() + frames[T]["snn_wr"].sum()) / a_total
-               for T in Ts]
+    for i, (name, (_, frames)) in enumerate(models.items()):
+        Ts = [t for t in sorted(frames) if t in all_T]
+        amp = [_acc(frames, t) / a_total for t in Ts]
         ax.plot(Ts, amp, "D-", lw=2, ms=6, color=f"C{i}", label=name)
-        for T, v in zip(Ts, amp):
-            if T in (all_T[-1], all_T[len(all_T) // 2]):
-                ax.annotate(f"{v:.1f}x", (T, v), textcoords="offset points",
-                            xytext=(4, 4), fontsize=9)
+        ax.annotate(f"{amp[-1]:.1f}x", (Ts[-1], amp[-1]),
+                    textcoords="offset points", xytext=(5, 4), fontsize=9)
     ax.axhline(1.0, color="k", ls=":", lw=2, label="ANN parity")
     ax.set_yscale("log"); ax.set_xlabel("Timesteps (T)")
     ax.set_ylabel("SNN accesses / ANN accesses")
-    ax.set_title("Memory amplification over the ANN")
-    ax.legend(); _x(ax)
+    ax.set_title("Memory amplification over the ANN"); ax.legend(); _x(ax)
     fig.tight_layout(); plt.show()
 
-    # 3. reads vs writes, stacked per model across T
+    # 3. reads vs writes
     n = len(models)
     fig, axes = plt.subplots(1, n, figsize=(6 * n, 4.2), squeeze=False)
-    for ax, (name, (summary, frames)) in zip(axes[0], models.items()):
-        Ts = sorted(frames)
-        rd = [frames[T]["snn_rd"].sum() for T in Ts]
-        wr = [frames[T]["snn_wr"].sum() for T in Ts]
+    for ax, (name, (_, frames)) in zip(axes[0], models.items()):
+        Ts = [t for t in sorted(frames) if t in all_T]
+        rd = [float(frames[t]["snn_rd"].sum()) for t in Ts]
+        wr = [float(frames[t]["snn_wr"].sum()) for t in Ts]
         x = np.arange(len(Ts))
         ax.bar(x, rd, label="reads", color="C0")
         ax.bar(x, wr, bottom=rd, label="writes", color="C1")
         ax.axhline(a_total, color="k", ls="--", lw=1.8, label="ANN total")
-        ax.set_yscale("log")
-        ax.set_xticks(x); ax.set_xticklabels(Ts)
+        ax.set_yscale("log"); ax.set_xticks(x); ax.set_xticklabels(Ts)
         ax.set_xlabel("Timesteps (T)"); ax.set_title(name)
         ax.grid(True, axis="y", alpha=0.3); ax.legend(fontsize=8)
     axes[0][0].set_ylabel("Memory accesses per inference")
-    fig.suptitle("Reads vs writes")
-    fig.tight_layout(); plt.show()
+    fig.suptitle("Reads vs writes"); fig.tight_layout(); plt.show()
 
-    # 4. accesses triggered per spike -- a structural constant of the topology
+    # 4. accesses per spike
     fig, ax = plt.subplots(figsize=(8, 4.5))
     for i, (name, (summary, frames)) in enumerate(models.items()):
         s = summary.sort_values("T")
-        Ts = s["T"].astype(int).tolist()
-        per_spike = []
-        for T in Ts:
-            sp = float(s.loc[s["T"] == T, "total_spikes"].iloc[0])
-            tot = frames[T]["snn_rd"].sum() + frames[T]["snn_wr"].sum()
-            per_spike.append(tot / sp if sp > 0 else np.nan)
-        ax.plot(Ts, per_spike, "s-", lw=2, ms=6, color=f"C{i}", label=name)
+        Ts = [int(t) for t in s["T"] if int(t) in all_T]
+        vals = []
+        for t in Ts:
+            sp = float(s.loc[s["T"] == t, "total_spikes"].iloc[0])
+            vals.append(_acc(frames, t) / sp if sp > 0 else np.nan)
+        ax.plot(Ts, vals, "s-", lw=2, ms=6, color=f"C{i}", label=name)
     ax.set_yscale("log"); ax.set_xlabel("Timesteps (T)")
     ax.set_ylabel("Memory accesses per spike")
-    ax.set_title("Cost of one spike in memory traffic")
-    ax.legend(); _x(ax)
+    ax.set_title("Cost of one spike in memory traffic"); ax.legend(); _x(ax)
     fig.tight_layout(); plt.show()
 
-    # 5. per-layer memory accesses at one T, against the ANN's per-layer counts
+    # 5.  per-layer memory accesses at one T, against the ANN's per-layer counts
     ann_by_layer = dict(zip(a_layers["layer"], a_layers["rd"] + a_layers["wr"]))
-    for name, (summary, frames) in models.items():
-        pl = frames[at_T]
-        layers = pl["layer"].tolist()
-        x = np.arange(len(layers))
-        w = 0.38
-        fig, ax = plt.subplots(figsize=(9, 4.5))
-        ax.bar(x - w / 2, [ann_by_layer.get(l, 0) for l in layers], w,
-               label="ANN", color="C7")
-        ax.bar(x + w / 2, pl["snn_rd"] + pl["snn_wr"], w, label=name, color="C0")
-        ax.set_yscale("log")
-        ax.set_xticks(x); ax.set_xticklabels(layers, rotation=30, ha="right")
-        ax.set_ylabel("Memory accesses per inference")
-        ax.set_title(f"Per-layer memory traffic, {name} (T = {at_T})")
-        ax.legend(); ax.grid(True, axis="y", alpha=0.3)
-        fig.tight_layout(); plt.show()
+    fig, axes = plt.subplots(1, n, figsize=(6.5 * n, 4.6), squeeze=False)
+    for ax, (name, (_, frames)) in zip(axes[0], models.items()):
+        Ts = [t for t in sorted(frames) if t in all_T]
+        layers = frames[Ts[-1]]["layer"].tolist()
+        x = np.arange(len(Ts))
+        bottom = np.zeros(len(Ts))
+        for j, lyr in enumerate(layers):
+            vals = np.array([
+                float(frames[t].loc[frames[t]["layer"] == lyr, "snn_rd"].iloc[0]
+                      + frames[t].loc[frames[t]["layer"] == lyr, "snn_wr"].iloc[0])
+                for t in Ts])
+            ax.bar(x, vals, bottom=bottom, label=lyr, color=f"C{j}")
+            bottom += vals
+        ax.axhline(a_total, color="k", ls="--", lw=1.8, label="ANN total")
+        ax.set_xticks(x); ax.set_xticklabels(Ts)
+        ax.set_xlabel("Timesteps (T)"); ax.set_title(name)
+        ax.grid(True, axis="y", alpha=0.3); ax.legend(fontsize=7)
+    axes[0][0].set_ylabel("Memory accesses per inference")
+    fig.suptitle("Per-layer memory traffic (linear scale shows which layer dominates)")
+    fig.tight_layout(); plt.show()
 
     # 6. per-layer access cost vs footprint
+    ref_T = all_T[-1]
     fig, ax = plt.subplots(figsize=(8, 5))
-    ax.scatter(a_layers["mem_kB"] / 1024, a_layers["pJ_per_access"],  s=90, marker="s", color="C7", label="ANN layers", zorder=3)
+    ax.scatter(a_layers["mem_kB"] / 1024, a_layers["pJ_per_access"],
+               s=90, marker="s", color="C7", label="ANN layers", zorder=3)
     for _, r in a_layers.iterrows():
-        ax.annotate(r["layer"], (r["mem_kB"] / 1024, r["pJ_per_access"]), textcoords="offset points", xytext=(6, -3), fontsize=8)
-    for i, (name, (summary, frames)) in enumerate(models.items()):
-        pl = frames[at_T]
-        ax.scatter(pl["snn_mem_kB"] / 1024, pl["snn_pJ_per_access"], s=70, color=f"C{i}", label=name, zorder=3)
+        ax.annotate(r["layer"], (r["mem_kB"] / 1024, r["pJ_per_access"]),
+                    textcoords="offset points", xytext=(6, -3), fontsize=8)
+    for i, (name, (_, frames)) in enumerate(models.items()):
+        pl = frames[ref_T]
+        ax.scatter(pl["snn_mem_kB"] / 1024, pl["snn_pJ_per_access"],
+                   s=70, color=f"C{i}", label=name, zorder=3)
     for kb, pj in [(8, 10), (32, 20), (1024, 100)]:
         ax.plot(kb / 1024, pj, "kx", ms=9)
-    ax.annotate("interpolation anchors\n(8 kB, 32 kB, 1 MB)", (1.0, 100), textcoords="offset points", xytext=(-110, 18), fontsize=8)
+    ax.annotate("interpolation anchors\n(8 kB, 32 kB, 1 MB)", (1.0, 100),
+                textcoords="offset points", xytext=(-110, 18), fontsize=8)
     ax.set_xscale("log"); ax.set_xlabel("Layer memory footprint (MB)")
     ax.set_ylabel("Energy per SRAM access (pJ)")
-    ax.set_title("Per-access cost (set by layer size, not by spiking)")
+    ax.set_title("Per-access cost is set by layer size, not by T or spiking")
     ax.grid(True, alpha=0.3); ax.legend(fontsize=8)
     fig.tight_layout(); plt.show()
 
 
-def memory_summary(ann_result: Dict, totals: pd.DataFrame, at_T: int = 32) -> pd.DataFrame:
+def memory_summary(ann_result: Dict, totals: pd.DataFrame,
+                   at_T: Union[int, Iterable[int], None] = None) -> pd.DataFrame:
+    """Compact memory table. Defaults to every T."""
     snap = totals_at(totals, at_T)
     return snap[
         [
