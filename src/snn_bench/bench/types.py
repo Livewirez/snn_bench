@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
+from enum import Enum 
+import pandas as pd
 
 import torch.nn as nn
 from spikingjelly.activation_based import neuron
@@ -42,7 +44,17 @@ INT32_MODEL = EnergyModel(E_ADD_INT32, E_MULT_INT32, "int32")
 FP32_MODEL  = EnergyModel(E_ADD_FP32,  E_MULT_FP32,  "fp32")
  
  
+class BenchLevel(Enum):
+    LEVEL_ONE = 1
+    LEVEL_FOUR = 2
+    LEVEL_THREE = 3
+    LEVEL_ALL = 4
 
+ 
+@dataclass
+class BenchResult:
+    level: BenchLevel
+    result: pd.DataFame
 
 # ======================================================================
 # TOPOLOGY

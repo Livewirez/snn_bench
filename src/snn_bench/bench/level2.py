@@ -72,8 +72,10 @@ def _dense_counts(s: LayerSpec, repeats: int = 1, is_snn_encoder: bool = False) 
         wr = s.Nout
         mac_addr = 0.0
         acc_addr = s.Nin + s.Nout
-    out = {"mac": mac, "acc": acc, "rd": rd, "wr": wr,
-           "mac_addr": mac_addr, "acc_addr": acc_addr}
+    out = {
+        "mac": mac, "acc": acc, "rd": rd, "wr": wr,
+        "mac_addr": mac_addr, "acc_addr": acc_addr
+    }
     if repeats != 1:
         out = {k: v * repeats for k, v in out.items()}
         if is_snn_encoder:

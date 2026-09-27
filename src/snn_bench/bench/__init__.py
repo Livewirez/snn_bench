@@ -257,7 +257,8 @@ def run_benchmark(
         validate_activity(specs, T, strict=strict_validation)
         l1 = level1_summary(specs, T)
         snn_e, ann_e, per_layer = analytical_energy(
-            specs, T, em=energy_model, fc_acc_literal=fc_acc_literal)
+            specs, T, em=energy_model, fc_acc_literal=fc_acc_literal
+        )
         frames[T] = per_layer
  
         row = {
@@ -280,13 +281,15 @@ def run_benchmark(
         if run_level3:
             row.update({k: v for k, v in measure_empirical(
                 snn, loader, T, device, min_duration_s=l3_min_duration_s,
-                repeats=l3_repeats).items() if k != "T"})
+                repeats=l3_repeats).items() if k != "T"
+            })
         rows.append(row)
  
         if verbose:
-            print(f"  spikes/sample     : {row['total_spikes']:.1f}")
-            print(f"  spikes/neuron/inf : {row['spikes_per_neuron']:.4f} "
+            print(f"  spikes/sample (Total Spikes)    : {row['total_spikes']:.1f}")
+            print(f"  spikes/neuron/inf (Spikes per Neuron) : {row['spikes_per_neuron']:.4f} "
                   f"({'BELOW' if row['spikes_per_neuron'] < 1.72 else 'ABOVE'} 1.72)")
+            print(f"E_ann{row['E_ann']}j => E_snn{row['E_snn']}j")
             print(f"  E_ann / E_snn     : {row['E_ratio_ann_over_snn']:.3f}x")
  
     df = pd.DataFrame(rows)
