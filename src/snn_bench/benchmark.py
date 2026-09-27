@@ -50,7 +50,11 @@ from .bench import (
     build_totals,
     memory_summary,
     plot_totals,
-    plot_memory_accesses
+    plot_memory_accesses,
+    level_columns,
+    query_levels,
+    
+    BenchLevel,
 )
 
 class Benchmark:
@@ -67,26 +71,44 @@ class Benchmark:
         #   ann["empirical"]  -> Level 3 dict
         #   ann["point"]      -> one-row DataFrame
         
-        models_bench_results = {}
+        snn_models_bench_results = {}
         
         for name, snn in snn_models.items():
             sum_metrics, layers = run_benchmark(snn, test_dataloader, device, **run_benchmark_args)
-            models_bench_results[name] = (sum_metrics, layers)
+            snn_models_bench_results[name] = (sum_metrics, layers)
 
-        totals = build_totals(ann_bench_result, models_bench_results)
+        totals = build_totals(ann_bench_result, snn_models_bench_results)
         print(totals.to_string(index=False))
         print(memory_summary(ann_bench_result, totals, at_T=at_T).to_string(index=False))
 
         plot_totals(ann_bench_result, totals, at_T=at_T)
-        plot_memory_accesses(ann_bench_result, models_bench_results, at_T=at_T)
+        plot_memory_accesses(ann_bench_result, snn_models_bench_results, at_T=at_T)
         
-        return ann_bench_result, totals, models_bench_results
+        return ann_bench_result, totals, snn_models_bench_results
         
     def build_totals(ann_bench_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]]) -> pd.DataFrame:
         return build_totals(ann_bench_result, models)
     
     def totals_at(totals: pd.DataFrame, at_T: int | Iterable[int] | None = None) -> pd.DataFrame:
         return totals_at(totals, at_T)
+    
+    
+    def query_levels(
+        totals: pd.DataFrame,
+        level: Union[BenchLevel, Iterable[BenchLevel]] = BenchLevel.LEVEL_ALL,
+        models: Optional[Union[str, Iterable[str]]] = None,
+        Ts: Optional[Union[int, Iterable[int]]] = None,
+        include_ann: bool = True,
+        dropna_columns: bool = True
+    ) -> pd.DataFrame:
+        return query_levels(
+            totals,
+            level=level,
+            models=models,
+            Ts=Ts,
+            include_ann=include_ann,
+            dropna_columns=dropna_columns
+        )
         
     def plot_totals(ann_bench_result: Dict, totals: pd.DataFrame, at_T: int | Iterable[int] | None = None):
         return plot_totals(ann_bench_result, totals, at_T)
@@ -207,6 +229,11 @@ __all__ = [
     "build_totals",
     "memory_summary",
     "plot_totals",
-    "plot_memory_accesses"
+    "plot_memory_accesses",
+    "level_columns",
+    "query_levels",
+    
+    "BenchLevel", 
+    "BenchColumnMapper",
 ]
 

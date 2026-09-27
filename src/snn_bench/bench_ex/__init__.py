@@ -23,7 +23,7 @@ from ..constants import _NVML, _HAS_NVML, _HAS_PSUTIL
 
 from .types import (
     LayerSpec, EnergyModel, BenchLevel, BenchColumnMapper,
-    SYNAPTIC_TYPES, NEURON_TYPES,
+    HandlerRegistry, DEFAULT_REGISTRY, SYNAPTIC_TYPES, NEURON_TYPES,
     E_ADD_INT32, E_MULT_INT32, E_ADD_FP32, E_MULT_FP32,
     _SRAM_POINTS, BYTES_PER_WORD, INT32_MODEL, FP32_MODEL
 )
@@ -58,7 +58,136 @@ def sram_access_energy(size_kB: float) -> float:
 # - Whether the layer receives spikes or analog numbers
 # - If spikes, what they've been multiplied by
 
-def profile_topology(model: nn.Module, example_input: torch.Tensor, device: torch.device, probe_T: int = 8) -> List[LayerSpec]:
+def profile_topology_(model: nn.Module, example_input: torch.Tensor, device: torch.device, probe_T: int = 8) -> List[LayerSpec]:
+    """
+    Recovers layer geometry, links each synaptic layer to the neuron that
+    follows it, and decides analog-vs-spiking from the DISTINCT VALUES seen
+    across `probe_T` timesteps.  One timestep is not enough: right after a
+    reset most layers emit all zeros, which looks binary.
+    
+    Info:
+    ```
+    profile_topology(model, x0[:1], device, probe_T=8)
+    ├─ syn_hook fires      -> name, kind, exec_order, has_bias, geometry
+    ├─ syn_hook fires x8   -> distinct values collected into seen_values
+    ├─ neu_hook fires      -> exec_order, neurons per sample, is-LIF flag
+    ├─ after probe         -> analog_input, input_scale
+    └─ linking step        -> neuron_name, neuron_count, neuron_is_lif
+    ```
+    """
+    model.eval() # evaluation mode: disables Dropoff(p=0.4)
+    specs: Dict[str, LayerSpec] = {}
+    order: List[Tuple[int, str, str]] = [] # List of tuples Execution Order - Each entry is  (position, name, "syn" | "neu") -> helps to wokout which neuron follows which layer
+    neuron_info: Dict[str, Tuple[int, int, bool]] = {}  # neuron_name -> (position, neuron count, is it LIF)
+    seen_values: Dict[str, set] = {} # Layer name -> the set of distinct values ever seen at its input. This is how spiking is distinguished from analog.
+    counter = {"i": 0} # A counter shared by both hooks, so every layer gets a unique execution position.
+    hooks = [] # A counter shared by both hooks, so every layer gets a unique execution position.
+ 
+    # A hook only receives (m, inp, out) so it never learns its own layer's name.
+    # So syn_hook("features.0", mod) returns a hook (function closure) that has "features.0" baked into it.
+    # syn_hook can be called once per layer to manufacture a custom hook for each.
+    def syn_hook(name, mod):
+        def hook(m, inp, out):
+            """
+            out - the result what came out
+            inp - a tuple of what went in
+            m - the layer itself
+            """
+            x = inp[0] # incoming tensor
+            with torch.no_grad():
+                u = torch.unique(x.detach()) # torch.unique returns the sorted distinct values, which is the whole spiking detector.
+                # Binary spikes -> [0., 1.] have two values
+                # Scaled spikes -> [0., 1.8827] have two values
+                # An image -> thousands of values
+                if u.numel() <= 8: # Eight or fewer distinct values so as to record them all.
+                    seen_values.setdefault(name, set()).update(
+                        round(float(v), 6) for v in u) # gets the set for this layer, creating an empty one if it's the first time
+                else:
+                    seen_values.setdefault(name, set()).add(float("nan")) # More than eight values means definitely analog. storing would be wasteful so Nan means 'analog'
+            if name in specs: # The hook fires 8 times (once per probe timestep). Shape only needs recording once, so exits out on repeats.
+                return
+            idx = counter["i"]; counter["i"] += 1 # Stamp this layer with its execution position and bump the counter.
+            if isinstance(m, nn.Conv2d):
+                # For a conv layer. Tensor shapes are [batch, channels, height, width], so index 1 is channels, 2 is height, 3 is width.
+                # Input shape gives Cin/Hin/Win, output shape gives Cout/Hout/Wout.
+                # m.in_channels is ignored as its motr accurate to read from the tensor incase of LazyConv2d
+                sp = LayerSpec(
+                    name=name, kind="conv", exec_order=idx,
+                    has_bias=m.bias is not None, # if model/converted model has biases, DirectSNN uses bias=False
+                    Cin=x.shape[1], Hin=x.shape[2], Win=x.shape[3],
+                    Cout=out.shape[1], Hout=out.shape[2], Wout=out.shape[3],
+                    Hk=m.kernel_size[0], Wk=m.kernel_size[1], S=m.stride[0] # S=m.stride[0] takes only the vertical stride.
+                )
+            else:
+                # Linear layers are simpler and aren't lazy by the time we get here, so in_features and out_features can be read directly
+                sp = LayerSpec(
+                    name=name, kind="fc", exec_order=idx,
+                    has_bias=m.bias is not None,
+                    Nin=m.in_features, Nout=m.out_features
+                )
+            specs[name] = sp
+            order.append((idx, name, "syn")) # Stores the linear layer it, and logs it as a synaptic layer executed at position idx
+        return hook
+ 
+    def neu_hook(name, mod): # the spy on spiking neurons
+        def hook(m, inp, out):
+            if name in neuron_info: # only once
+                return
+            idx = counter["i"]; counter["i"] += 1
+            t = out[0] if isinstance(out, (tuple, list)) else out
+            n = t.numel() // max(t.shape[0], 1) # most neurons return a plain tensor, but some variants return a tuple, this handles both cases
+            # numel() is the total element count across the whole batch. Dividing by shape[0] (the batch size) gives neurons per sample.
+            # max(..., 1) guards against a zero-length batch causing a division by zero.
+            neuron_info[name] = (idx, n, isinstance(m, neuron.LIFNode))
+            # The third element is the leak flag. LIF neurons decay their membrane potential
+            # every timestep, which is a multiply, so they pay T * N MACs. IF neurons don't. Converted is all IF, also DirectSNN is all LIF
+            order.append((idx, name, "neu"))
+        return hook
+ 
+    # attaching the spies(registering the hooks)
+    for name, mod in model.named_modules():
+        if isinstance(mod, SYNAPTIC_TYPES): # (nn.Conv2d, nn.Linear)
+            hooks.append(mod.register_forward_hook(syn_hook(name, mod)))
+        elif isinstance(mod, NEURON_TYPES): # neuron.BaseNode is the parent class of IFNode, LIFNode and the rest, so isinstance matches all of them.
+            hooks.append(mod.register_forward_hook(neu_hook(name, mod)))
+ 
+    with torch.no_grad():
+        functional.reset_net(model) # reset_net clears every membrane potential to its starting value.
+        for _ in range(probe_T):
+            model(example_input.to(device))
+    for h in hooks:
+        h.remove() # Detach the spies.
+    functional.reset_net(model) # Reset again, so the model is left exactly as found.
+ 
+    for name, sp in specs.items():
+        raw = seen_values.get(name, set())
+        has_many = any(math.isnan(v) for v in raw)
+        nonzero = sorted(v for v in raw if not math.isnan(v) and v != 0.0) # both spiking and analog tensors contain zeros.
+        if has_many or len(nonzero) > 1:
+            sp.analog_input = True # Many values, or more than one distinct non-zero value, means analog.
+            sp.input_scale = 1.0
+        else:
+            sp.analog_input = False  # Exactly one distinct non-zero value means binary-scaled spikes,
+            sp.input_scale = nonzero[0] if nonzero else 1.0
+ 
+    order.sort() # Sorts by the first tuple element, idx, putting everything back into execution order.
+    for i, (idx, name, kind) in enumerate(order):
+        if kind != "syn":  # For each synaptic layer, scan forward until the first spiking neuron is found. That's its neuron. break stops at the first match.
+            continue
+        for j in range(i + 1, len(order)):
+            if order[j][2] == "neu":
+                nname = order[j][1]
+                _, cnt, is_lif = neuron_info[nname]
+                specs[name].neuron_name = nname
+                specs[name].neuron_count = cnt
+                specs[name].neuron_is_lif = is_lif
+                break
+ 
+    # Hand back the layer specs in execution order, such that the per-layer table reads top to bottom like the network.
+    return sorted(specs.values(), key=lambda s: s.exec_order)
+
+
+def profile_topology(model: nn.Module, example_input: torch.Tensor, device: torch.device, probe_T: int = 8, registry: HandlerRegistry = DEFAULT_REGISTRY) -> List[LayerSpec]:
     """
     Recovers layer geometry, links each synaptic layer to the neuron that
     follows it, and decides analog-vs-spiking from the DISTINCT VALUES seen
@@ -217,7 +346,9 @@ def accuracy_vs_T(model, loader, Ts: List[int], device,  spiking: bool = True, m
  
 
 def run_benchmark(
-    snn: nn.Module, loader: DataLoader, device: Union[torch.device, str],
+    snn: nn.Module, 
+    loader: DataLoader, 
+    device: Union[torch.device, str],
     Ts: List[int] = (1, 2, 4, 8, 16, 32, 64),
     max_batches_l1: Optional[int] = 20,
     energy_model: EnergyModel = INT32_MODEL,
@@ -226,7 +357,7 @@ def run_benchmark(
     l3_repeats: int = 3,
     measure_accuracy: bool = True,
     acc_max_batches: Optional[int] = None,
-    fc_acc_literal: bool = False,
+    registry: HandlerRegistry = DEFAULT_REGISTRY,
     strict_validation: bool = True,
     verbose: bool = True
 ):
@@ -253,12 +384,11 @@ def run_benchmark(
     for T in Ts:
         if verbose:
             print(f"\n--- T = {T} ---")
-        specs = count_activity(snn, base_specs, loader, T, device,
-                               max_batches=max_batches_l1)
+        specs = count_activity(snn, base_specs, loader, T, device, max_batches=max_batches_l1, registry=registry)
         validate_activity(specs, T, strict=strict_validation)
         l1 = level1_summary(specs, T)
         snn_e, ann_e, per_layer = analytical_energy(
-            specs, T, em=energy_model, fc_acc_literal=fc_acc_literal
+            specs, T, em=energy_model, registry=registry
         )
         frames[T] = per_layer
  
@@ -493,5 +623,8 @@ __all__ = [
     
     "BenchLevel", 
     "BenchColumnMapper",
+    
+    "HandlerRegistry",
+    "DEFAULT_REGISTRY"
 ]
  
