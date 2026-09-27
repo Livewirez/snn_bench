@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 from enum import Enum 
 import pandas as pd
@@ -155,5 +155,7 @@ _SUMMARY_L3 = {
 
 @dataclass
 class BenchColumMapper:
-    id_cols: List[str] = IDENTITY_COLUMNS
-    result: pd.DataFrame
+    id_cols: List[str] = field(default_factory=lambda: IDENTITY_COLUMNS)
+    level_one_cols: List[str] = field(default_factory=lambda: LEVEL_ONE_COLUMNS)
+    level_two_cols: List[str] = field(default_factory=lambda: LEVEL_TWO_COLUMNS)
+    level_three_cols: List[str] = field(default_factory=lambda: LEVEL_THREE_COLUMNS)
