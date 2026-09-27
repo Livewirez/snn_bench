@@ -173,11 +173,6 @@ class BenchLevel(Enum):
     LEVEL_THREE = 3   # empirical measurement [NVML / psutil on the host]
     LEVEL_ALL   = 4
 
-@dataclass
-class BenchResult:
-    level: BenchLevel
-    result: pd.DataFrame
-
 
 # The columns present in every view, regardless of level.
 IDENTITY_COLUMNS: List[str] = ["model", "T", "accuracy"]
@@ -222,8 +217,10 @@ _SUMMARY_L3 = {
 
 @dataclass
 class BenchColumMapper:
-    id_cols: List[str] = IDENTITY_COLUMNS
-    result: pd.DataFrame
+    id_cols: List[str] = field(default_factory=lambda: IDENTITY_COLUMNS)
+    level_one_cols: List[str] = field(default_factory=lambda: LEVEL_ONE_COLUMNS)
+    level_two_cols: List[str] = field(default_factory=lambda: LEVEL_TWO_COLUMNS)
+    level_three_cols: List[str] = field(default_factory=lambda: LEVEL_THREE_COLUMNS)
     
     
 class Conv2dHandler:
