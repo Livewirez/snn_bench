@@ -77,7 +77,7 @@ def profile_topology(model: nn.Module, example_input: torch.Tensor, device: torc
     """
     model.eval() # evaluation mode: disables Dropoff(p=0.4)
     specs: Dict[str, LayerSpec] = {}
-    order: List[Tuple[int, str, str]] = [] # List of tuples Execution Order - Each entry is  (position, name, "syn" | "neu") -> helps to wokout which neuron follows which layer
+    order: List[Tuple[int, str, str]] = [] # List of tuples Execution Order - Each entry is  (position, name, "syn" | "neu") -> helps to workout which neuron follows which layer
     neuron_info: Dict[str, Tuple[int, int, bool]] = {}  # neuron_name -> (position, neuron count, is it LIF)
     seen_values: Dict[str, set] = {} # Layer name -> the set of distinct values ever seen at its input. This is how spiking is distinguished from analog.
     counter = {"i": 0} # A counter shared by both hooks, so every layer gets a unique execution position.
@@ -446,9 +446,6 @@ from .totals_report import (
     calculate_energy_efficiency_reference,
     calculate_energy_efficiency_from_summary,
     plot_energy_efficiency,
-    
-    
-    
 )
 
 
