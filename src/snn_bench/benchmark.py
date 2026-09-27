@@ -60,42 +60,42 @@ class Benchmark:
         test_dataloader: DataLoader, device: Union[torch.device, str] = DEVICE,
         at_T: int | Iterable[int] | None = None, **run_benchmark_args
     ):
-        ann_result = profile_ann(ann_model, test_dataloader, device)
+        ann_bench_result = profile_ann(ann_model, test_dataloader, device)
         #   ann["accuracy"]   -> float, e.g. 0.9864
         #   ann["totals"]     -> dict of analytical energy totals
         #   ann["per_layer"]  -> DataFrame, one row per layer
         #   ann["empirical"]  -> Level 3 dict
         #   ann["point"]      -> one-row DataFrame
         
-        models = {}
+        models_bench_results = {}
         
         for name, snn in snn_models.items():
             sum_metrics, layers = run_benchmark(snn, test_dataloader, device, **run_benchmark_args)
-            models[name] = (sum_metrics, layers)
+            models_bench_results[name] = (sum_metrics, layers)
 
-        totals = build_totals(ann_result, models)
+        totals = build_totals(ann_bench_result, models_bench_results)
         print(totals.to_string(index=False))
-        print(memory_summary(ann_result, totals, at_T=at_T).to_string(index=False))
+        print(memory_summary(ann_bench_result, totals, at_T=at_T).to_string(index=False))
 
-        plot_totals(ann_result, totals, at_T=at_T)
-        plot_memory_accesses(ann_result, models, at_T=at_T)
+        plot_totals(ann_bench_result, totals, at_T=at_T)
+        plot_memory_accesses(ann_bench_result, models_bench_results, at_T=at_T)
         
-        return ann_result, totals, models
+        return ann_bench_result, totals, models_bench_results
         
-    def build_totals(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]]) -> pd.DataFrame:
-        return build_totals(ann_result, models)
+    def build_totals(ann_bench_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]]) -> pd.DataFrame:
+        return build_totals(ann_bench_result, models)
     
     def totals_at(totals: pd.DataFrame, at_T: int | Iterable[int] | None = None) -> pd.DataFrame:
         return totals_at(totals, at_T)
         
-    def plot_totals(ann_result: Dict, totals: pd.DataFrame, at_T: int | Iterable[int] | None = None):
-        return plot_totals(ann_result, totals, at_T)
+    def plot_totals(ann_bench_result: Dict, totals: pd.DataFrame, at_T: int | Iterable[int] | None = None):
+        return plot_totals(ann_bench_result, totals, at_T)
         
-    def plot_memory_accesses(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]], at_T: int | Iterable[int] | None = None):
-        return plot_memory_accesses(ann_result, models, at_T)
+    def plot_memory_accesses(ann_bench_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]], at_T: int | Iterable[int] | None = None):
+        return plot_memory_accesses(ann_bench_result, models, at_T)
         
-    def memory_summary(ann_result: Dict, totals: pd.DataFrame, at_T: int | Iterable[int] | None = None) -> pd.DataFrame:
-        return memory_summary(ann_result, totals, at_T)
+    def memory_summary(ann_bench_result: Dict, totals: pd.DataFrame, at_T: int | Iterable[int] | None = None) -> pd.DataFrame:
+        return memory_summary(ann_bench_result, totals, at_T)
     
     def run_benchmark(
         snn: nn.Module, loader: DataLoader, device: Union[torch.device, str] = DEVICE,

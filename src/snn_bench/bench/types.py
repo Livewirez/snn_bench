@@ -54,7 +54,7 @@ class BenchLevel(Enum):
 @dataclass
 class BenchResult:
     level: BenchLevel
-    result: pd.DataFame
+    result: pd.DataFrame
 
 # ======================================================================
 # TOPOLOGY

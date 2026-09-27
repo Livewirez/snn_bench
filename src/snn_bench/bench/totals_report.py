@@ -7,7 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def build_totals(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]]) -> pd.DataFrame:
+def build_totals(ann_bench_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]]) -> pd.DataFrame:
     """
     One row per (model, T), plus a single ANN row with T = NaN.
 
@@ -17,12 +17,12 @@ def build_totals(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[in
     """
     rows = []
 
-    a_layers = ann_result["per_layer"]
-    a_tot = ann_result["totals"]
+    a_layers = ann_bench_result["per_layer"]
+    a_tot = ann_bench_result["totals"]
     a_rd, a_wr = float(a_layers["rd"].sum()), float(a_layers["wr"].sum())
     rows.append({
         "model": "ANN", "T": np.nan,
-        "accuracy": ann_result["accuracy"],
+        "accuracy": ann_bench_result["accuracy"],
         "spikes": 0.0, "neurons": 0,
         "spikes_per_neuron": np.nan,
         "mac": a_tot["mac"], "acc": a_tot["acc"],
@@ -73,12 +73,12 @@ def totals_at(totals: pd.DataFrame, at_T: Union[int, Iterable[int], None] = None
     return pd.concat([ann_row, swept.sort_values(["model", "T"])], ignore_index=True)
 
 
-def plot_totals(ann_result: Dict, totals: pd.DataFrame, at_T: Union[int, Iterable[int], None] = None):
+def plot_totals(ann_bench_result: Dict, totals: pd.DataFrame, at_T: Union[int, Iterable[int], None] = None):
     """Side-by-side totals for the ANN and every SNN, Totals across the whole sweep. at_T=None uses every T."""
     snap = totals_at(totals, at_T)
     swept = totals[totals["T"].notna()]
     all_T = sorted(swept["T"].unique().astype(int))
-    E_ann = ann_result["totals"]
+    E_ann = ann_bench_result["totals"]
 
     def _x(ax):
         ax.set_xscale("log", base=2); ax.set_xticks(all_T)
@@ -151,9 +151,9 @@ def plot_totals(ann_result: Dict, totals: pd.DataFrame, at_T: Union[int, Iterabl
     fig.tight_layout(); plt.show()
 
 # MEMORY ACCESS PLOTS
-def plot_memory_accesses(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]],at_T: Union[int, Iterable[int], None] = None):
+def plot_memory_accesses(ann_bench_result: Dict, models: Dict[str, Tuple[pd.DataFrame, Dict[int, pd.DataFrame]]],at_T: Union[int, Iterable[int], None] = None):
     """Memory traffic across the un. at_T=None uses every T."""
-    a_layers = ann_result["per_layer"]
+    a_layers = ann_bench_result["per_layer"]
     a_rd, a_wr = float(a_layers["rd"].sum()), float(a_layers["wr"].sum())
     a_total = a_rd + a_wr
     all_T = sorted({int(t) for _, f in models.values() for t in f})
@@ -271,7 +271,7 @@ def plot_memory_accesses(ann_result: Dict, models: Dict[str, Tuple[pd.DataFrame,
     fig.tight_layout(); plt.show()
 
 
-def memory_summary(ann_result: Dict, totals: pd.DataFrame,
+def memory_summary(ann_bench_result: Dict, totals: pd.DataFrame,
                    at_T: Union[int, Iterable[int], None] = None) -> pd.DataFrame:
     """Compact memory table. Defaults to every T."""
     snap = totals_at(totals, at_T)
