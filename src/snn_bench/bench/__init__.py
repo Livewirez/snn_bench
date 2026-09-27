@@ -441,7 +441,9 @@ from .totals_report import (
     plot_memory_accesses,
     memory_summary,
     level_columns,
-    query_levels
+    query_levels,
+    calculate_energy_efficiency,
+    calculate_energy_efficiency_reference
 )
 
 
@@ -490,6 +492,10 @@ __all__ = [
     "memory_summary",
     "level_columns",
     "query_levels",
+    "calculate_energy_efficiency",
+    "calculate_energy_efficiency_reference",
+    "calculate_energy_efficiency_from_summary"
+    "plot_energy_efficiency"
     
     "BenchLevel", 
     "BenchColumnMapper",

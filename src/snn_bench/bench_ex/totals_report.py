@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Tuple, Optional, List, Union, Iterable
+from typing import Dict, Tuple, Optional, List, Union, Iterable, Sequence
 
 import numpy as np
 import pandas as pd
@@ -159,7 +159,63 @@ def query_levels(
 
     return out.reset_index(drop=True)
 
+from typing import Dict, Iterable, Optional, Sequence, Union
 
+def calculate_energy_efficiency(
+    accuracy: Union[float, Sequence[float]],
+    energy_joules: Union[float, Sequence[float]],
+    chance_level: Optional[float] = None,
+    min_accuracy: Optional[float] = None
+):
+    acc = np.asarray(accuracy, dtype=float)
+    e = np.asarray(energy_joules, dtype=float)
+ 
+    num = acc if chance_level is None else np.clip(acc - chance_level, 0, None)
+    eff = np.divide(num, e, out=np.full_like(num, np.nan), where=e > 0)
+ 
+    if min_accuracy is not None:
+        eff = np.where(acc >= min_accuracy, eff, np.nan)
+ 
+    return float(eff) if eff.ndim == 0 else eff
+
+
+def calculate_energy_efficiency_from_summary(
+    summary: pd.DataFrame,
+    n_classes: int = 10,
+    min_accuracy: Optional[float] = 0.5,
+    energy_col: str = "E_snn"
+) -> pd.DataFrame:
+    out = summary[["T", "accuracy"]].copy()
+    out["E_joules"] = summary[energy_col]
+    out["eff_raw"] = calculate_energy_efficiency(out["accuracy"], out["E_joules"])
+    out["eff_above_chance"] = calculate_energy_efficiency(
+        out["accuracy"], out["E_joules"],
+        chance_level=1.0 / n_classes, min_accuracy=min_accuracy
+    )
+    return out
+
+def calculate_energy_efficiency_reference(ann_bench_result: Dict, n_classes: int =10, energy_key: str="E_total", chance: bool =True):
+    return calculate_energy_efficiency(
+        ann_bench_result["accuracy"],
+        ann_bench_result["totals"][energy_key],
+        chance_level=(1.0 / n_classes) if chance else None
+    )
+    
+def plot_energy_efficiency(eff: pd.DataFrame, ann_efficiency: Optional[float] = None, prefix: str = ""):
+    Ts = eff["T"].values
+    fig, ax = plt.subplots(figsize=(7.5, 4.5))
+    ax.plot(Ts, eff["eff_raw"], "s--", color="C7", lw=1.5, alpha=0.7,
+            label="raw  Acc / E")
+    ax.plot(Ts, eff["eff_above_chance"], "o-", color="C6", lw=2, ms=7,
+            label="floored  (Acc - chance) / E")
+    if ann_efficiency is not None:
+        ax.axhline(ann_efficiency, color="k", ls="--", lw=2, label="ANN")
+    ax.set_yscale("log"); ax.set_xscale("log", base=2)
+    ax.set_xticks(Ts); ax.set_xticklabels(Ts)
+    ax.set_xlabel("Timesteps (T)"); ax.set_ylabel("Accuracy per joule")
+    ax.set_title(f"{prefix}Eq. 5 efficiency")
+    ax.grid(True, alpha=0.3); ax.legend(fontsize=8)
+    fig.tight_layout(); plt.show()
 
 def plot_totals(ann_bench_result: Dict, totals: pd.DataFrame, at_T: Union[int, Iterable[int], None] = None):
     """Side-by-side totals for the ANN and every SNN, Totals across the whole sweep. at_T=None uses every T."""

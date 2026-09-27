@@ -24,7 +24,7 @@ Components (one module each, independently testable):
     train       -- methods for training anns and snns
 """
 
-__version__ = "0.1.81"
+__version__ = "0.1.82"
 
 
 from typing import Union

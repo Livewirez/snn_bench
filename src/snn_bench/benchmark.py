@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader, random_split
-from typing import Dict, List, Optional, Union, Iterable
+from typing import Dict, List, Optional, Union, Iterable, Sequence
 
 from .config import DEVICE
 
@@ -53,8 +53,13 @@ from .bench import (
     plot_memory_accesses,
     level_columns,
     query_levels,
+    calculate_energy_efficiency,
+    calculate_energy_efficiency_reference,
+    calculate_energy_efficiency_from_summary,
+    plot_energy_efficiency,
     
-    BenchLevel,
+    BenchLevel, 
+    BenchColumnMapper,
 )
 
 class Benchmark:
@@ -186,6 +191,36 @@ class Benchmark:
             df, summaries, E_ann
         )
         
+    def calculate_energy_efficiency(
+        accuracy: Union[float, Sequence[float]],
+        energy_joules: Union[float, Sequence[float]],
+        chance_level: Optional[float] = None,
+        min_accuracy: Optional[float] = None
+    ):
+        return calculate_energy_efficiency(
+            accuracy, energy_joules, chance_level, min_accuracy
+        )
+        
+    def calculate_energy_efficiency_from_summary(
+        summary: pd.DataFrame,
+        n_classes: int = 10,
+        min_accuracy: Optional[float] = 0.5,
+        energy_col: str = "E_snn"
+    ) -> pd.DataFrame:
+        return calculate_energy_efficiency_from_summary(
+            summary, n_classes, min_accuracy, energy_col
+        )
+    
+    def calculate_energy_efficiency_reference(ann_bench_result: Dict, n_classes: int =10, energy_key: str="E_total", chance: bool =True):
+        return calculate_energy_efficiency_reference(
+            ann_bench_result, n_classes, energy_key, chance
+        )
+        
+    def plot_energy_efficiency(eff: pd.DataFrame, ann_efficiency: Optional[float] = None, prefix: str = ""):
+        return  plot_energy_efficiency(
+            eff, ann_efficiency, prefix
+        )
+        
     def crossing_points(ann_result: Union[Dict, pd.DataFrame], summary: pd.DataFrame, acc_tolerance: float = 0.01) -> Dict:
         return crossing_points(ann_result, summary, acc_tolerance)
         
@@ -232,6 +267,10 @@ __all__ = [
     "plot_memory_accesses",
     "level_columns",
     "query_levels",
+    "calculate_energy_efficiency",
+    "calculate_energy_efficiency_reference",
+    "calculate_energy_efficiency_from_summary"
+    "plot_energy_efficiency"
     
     "BenchLevel", 
     "BenchColumnMapper",
