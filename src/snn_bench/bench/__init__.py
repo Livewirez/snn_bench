@@ -443,7 +443,12 @@ from .totals_report import (
     level_columns,
     query_levels,
     calculate_energy_efficiency,
-    calculate_energy_efficiency_reference
+    calculate_energy_efficiency_reference,
+    calculate_energy_efficiency_from_summary,
+    plot_energy_efficiency,
+    
+    
+    
 )
 
 
