@@ -216,7 +216,7 @@ _SUMMARY_L3 = {
 }
 
 @dataclass
-class BenchColumMapper:
+class BenchColumnMapper:
     id_cols: List[str] = field(default_factory=lambda: IDENTITY_COLUMNS)
     level_one_cols: List[str] = field(default_factory=lambda: LEVEL_ONE_COLUMNS)
     level_two_cols: List[str] = field(default_factory=lambda: LEVEL_TWO_COLUMNS)
